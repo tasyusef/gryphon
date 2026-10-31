@@ -1,0 +1,71 @@
+# Windows and Linux builds of Gryphon, made on GitHub's runners. The Mac build is made and
+# signed on Tim's Mac instead (crates/app/scripts/package-macos.sh).
+#
+# Run it with `gh workflow run release.yml --ref <branch or tag>`; a `v*` tag runs it too.
+# `gh run download <run id> -D target/dist` puts the installers in target/dist/.
+# Artifacts:
+# - `windows-x64`: the NSIS installer (unsigned);
+# - `linux-x64`: the AppImage and the deb.
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            bundles: nsis
+            files: target/release/bundle/nsis/*.exe
+          # 22.04 rather than the latest image, so the AppImage runs on older glibc too.
+          - name: linux-x64
+            os: ubuntu-22.04
+            bundles: appimage,deb
+            files: |
+              target/release/bundle/appimage/*.AppImage
+              target/release/bundle/deb/*.deb
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.name }}
+          cache-on-failure: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk@0.22.0,tauri-cli@2.12.4
+      - name: Tests
+        shell: bash
+        run: cargo test --workspace --locked
+      - name: Installer
+        working-directory: crates/app
+        shell: bash
+        run: cargo tauri build --ci --bundles ${{ matrix.bundles }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error

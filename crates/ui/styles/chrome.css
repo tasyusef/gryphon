@@ -1,0 +1,78 @@
+/* From Toolbox (crates/ui/styles/chrome.css), kept in step with it. Gryphon's own rules are in kit.css. */
+/* ------------------------------------------------------------------
+   App chrome — the header, the sidebar, the screen frame and the bars.
+   Heights and widths are literal because they are geometry, not spacing:
+   64 header, 232 sidebar, 64 collapsed. All are 8px multiples.
+   ------------------------------------------------------------------ */
+/* pinned to the viewport: a focus or a resize can scroll an overflow-hidden document, and the app has no page to scroll */
+.app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+
+/* the header: the wordmark over the sidebar, the readout over the main column */
+.site-header{position:relative;z-index:var(--z-chrome);display:flex;align-items:center;gap:var(--s4);height:var(--header-height);padding:0 var(--gutter)}
+.wordmark{display:inline-flex;align-items:center;gap:var(--s2);font-size:43px;line-height:43px;white-space:nowrap;flex:none;min-width:calc(var(--sidebar) - var(--gutter))}
+.site-header.collapsed .wordmark{min-width:0}
+
+/* the readout: path and cursor left, what the screen is doing, the clock.
+   One flexible gap, not space-between: leftover width split between items
+   lands them on fractions of a pixel and blurs the bitmap face (site 0089).
+   The clock alone sits at the right. */
+.readout{flex:1;min-width:0;display:flex;align-items:center;gap:var(--s4);overflow:hidden;white-space:nowrap}
+.readout>span{flex:none;opacity:var(--dim)}
+.readout .path{display:flex;align-items:center;opacity:1;flex:0 1 auto;min-width:0}
+.readout .path-text{overflow:hidden;min-width:0;text-overflow:ellipsis}
+.readout .st-clock{margin-left:auto}
+/* the path and the status matter more than the clock; it yields first as the row tightens */
+@media(max-width:1199px){.st-clock{display:none}}
+
+/* the body: the sidebar beside the routed screen */
+.app-body{flex:1;min-height:0;display:flex}
+.app-main,.screen{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+
+/* --- the sidebar: sections of rows on the dither mat, no rules ------- */
+.sidebar{width:var(--sidebar);flex:none;display:flex;flex-direction:column;min-height:0;padding:var(--s2) var(--s2) var(--s3);background:var(--surface-card)}
+.sidebar.collapsed{width:var(--sidebar-rail);padding:var(--s2) var(--s1) var(--s3)}
+.side-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:var(--s3)}
+.side-foot{flex:none;display:flex;flex-direction:column;padding-top:var(--s3)}
+.side-section{display:flex;flex-direction:column}
+.side-label{display:flex;align-items:center;gap:var(--s1);width:100%;padding:9px var(--s2) 7px;text-align:left;white-space:nowrap} /* 9/7: see the label-button note in blocks.css */
+button.side-label:hover,button.side-label:focus-visible,button.side-label[aria-current]{background:var(--fg);color:var(--paper);opacity:1}
+/* a row: 32px tall, a 24px mark or a 16px glyph, then the words; the active row is the accent block */
+.side-row{display:flex;align-items:center;gap:var(--s1);width:100%;min-height:var(--s4);padding:4px var(--s2);text-align:left;white-space:nowrap;overflow:hidden}
+.side-row b{font-weight:400;opacity:var(--dim)}
+.side-row .t{position:relative;top:1px;min-width:0} /* the label face sits one pixel high when centred */
+.side-row:hover,.side-row:focus-visible{background:var(--fg);color:var(--paper)}
+.side-row[aria-current]{background:var(--accent);color:var(--on-accent)}
+.side-row:hover b,.side-row:hover .dim,.side-row[aria-current] b,.side-row[aria-current] .dim{opacity:1}
+.side-row .glyph{color:var(--accent-text);min-width:var(--s2);text-align:center}
+.side-row:hover .glyph,.side-row[aria-current] .glyph{color:inherit}
+.side-mark{width:var(--s3);height:var(--s3);flex:none;display:flex}
+.side-thumb{width:var(--s3);height:var(--s3);flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--paper)}
+.side-thumb img{max-width:100%;max-height:100%;object-fit:contain}
+.side-thumb .glyph{color:inherit;opacity:.25;width:auto}
+.side-meta{margin-left:auto;flex:none;padding-left:var(--s1)}
+.side-row .state{margin-left:auto;color:var(--accent-text);flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.side-row:hover .state,.side-row:focus-visible .state{color:inherit}
+.sidebar.collapsed .side-row{width:var(--s6);margin:0 auto;padding:4px 0;justify-content:center}
+.sidebar.collapsed .side-row .glyph{min-width:0}
+.sidebar.collapsed .side-section{gap:0}
+
+/* a preview beside a rail */
+.split{flex:1;min-height:0;display:flex}
+/* a stage field beside the rail stops a gutter short of it, the way padded stage
+   content does, so the rail's first column of type has air on its left */
+.split>.band.stage .band-bg{right:var(--gutter)}
+.stage{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.rail{width:var(--rail);flex:none;display:flex;flex-direction:column;min-height:0;padding:var(--s3) var(--gutter) var(--s3) 0;gap:var(--s4)}
+.rail-section{display:flex;flex-direction:column}
+.rail-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);padding:var(--s1) 0}
+.scroll{overflow-y:auto;min-height:0}
+.pad{padding:var(--s3) var(--gutter)}
+
+/* the bottom bar: the way back left, steps centre, the action right */
+.toolbar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:var(--s2) var(--gutter) var(--s3)}
+.toolbar .steps{display:flex;gap:var(--s1)}
+.toolbar .steps button{padding:var(--s1) var(--s2);opacity:var(--dim)}
+.toolbar .steps button b{font-weight:400;margin-right:var(--s1)}
+.toolbar .steps button[aria-current]{opacity:1;background:var(--accent);color:var(--on-accent)}
+.toolbar .steps button:disabled{opacity:.25}
+.toolbar .steps button:not(:disabled):not([aria-current]):hover{opacity:1;background:var(--fg);color:var(--paper)}

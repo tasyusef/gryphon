@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-add-github"
+description = "Enables the add_github command without any pre-configured scope."
+commands.allow = ["add_github"]
+
+[[permission]]
+identifier = "deny-add-github"
+description = "Denies the add_github command without any pre-configured scope."
+commands.deny = ["add_github"]

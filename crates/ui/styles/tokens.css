@@ -1,0 +1,45 @@
+/* From Toolbox (crates/ui/styles/tokens.css), kept in step with it. Gryphon's own rules are in kit.css. */
+/* ------------------------------------------------------------------
+   Layer 2 — semantic tokens. What a primitive means in the app.
+   Only these names should appear in type/chrome/blocks and in the views.
+   ------------------------------------------------------------------ */
+:root{
+  /* ground and type */
+  --paper:var(--ink);
+  --fg:var(--white);
+  --accent:var(--yellow);        /* fills: cursors, the current nav item, action blocks, the on state */
+  --accent-text:var(--yellow);   /* the accent as type; deepens on the light ground */
+  --field-accent:var(--yellow);  /* the one hot cell per field mode; its own yellow on the light ground */
+  --on-accent:var(--ink);
+  --dim:.55;                     /* opacity, not a colour */
+
+  /* status — the app's one addition to the palette's jobs */
+  --alert:var(--red);            /* something failed */
+  --warn:var(--accent-text);     /* something is off but the export still runs */
+
+  /* frame */
+  --gutter:32px;                 /* content side margin */
+  --rail:376px;                  /* the settings column beside a preview: 47 cells */
+  --header-height:64px;          /* the wordmark and the readout share it */
+  --sidebar:232px;               /* 29 cells: the tools, projects and recent work */
+  --sidebar-rail:64px;           /* collapsed: marks only */
+
+  /* surfaces — the site has no flat tints; it dithers */
+  --surface-card:repeating-conic-gradient(color-mix(in srgb,var(--fg) 14%,transparent) 0 25%,transparent 0 50%) 0 0/4px 4px;
+  --surface-card-hover:repeating-conic-gradient(color-mix(in srgb,var(--fg) 26%,transparent) 0 25%,transparent 0 50%) 0 0/8px 8px;
+  --texture-fallback-opacity:.35;
+  --field-ink:color-mix(in srgb,var(--fg) 40%,var(--paper));   /* the ASCII field: recessed, well behind the type */
+
+  /* the artwork's edge: outside the box, so it never covers a pixel of the work */
+  --rim:color-mix(in srgb,var(--fg) 14%,transparent);
+
+  /* layering, low to high */
+  --z-band-bg:0;
+  --z-band:1;
+  --z-chrome:2;
+  --z-float:10;   /* eyedropper readout, hover controls */
+  --z-nav:50;
+
+  color-scheme:dark;
+}
+:root[data-theme=light]{--paper:var(--white);--fg:var(--ink);color-scheme:light;--accent-text:var(--yellow-deep);--field-accent:var(--yellow-field)}

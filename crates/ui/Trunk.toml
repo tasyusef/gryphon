@@ -1,0 +1,17 @@
+# trunk build / trunk serve, run from this folder. Toolbox's setup (crates/ui/Trunk.toml there).
+[build]
+target = "index.html"
+dist = "dist"
+# The page's CSP (index.html) is `script-src 'self' 'wasm-unsafe-eval'`, which blocks the
+# inline loader Trunk injects. Empty patterns make Trunk inject nothing in its place, and
+# boot.js loads the app instead. boot.js names the outputs, so they keep stable names.
+pattern_script = ""
+pattern_preload = ""
+filehash = false
+no_sri = true
+minify = "never"
+
+[serve]
+port = 5190
+# The live-reload client is an inline script, which the CSP also blocks.
+no_autoreload = true

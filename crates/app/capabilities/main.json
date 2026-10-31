@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The main window: Gryphon's commands (src/names.rs). Nothing else.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-library",
+    "allow-check-updates",
+    "allow-install",
+    "allow-add-github",
+    "allow-update-all",
+    "allow-remove",
+    "allow-choose-game-folder",
+    "allow-auto-game-folder",
+    "allow-open-folder",
+    "allow-settings",
+    "allow-set-light",
+    "allow-set-token"
+  ]
+}

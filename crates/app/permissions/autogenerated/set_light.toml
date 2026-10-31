@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-light"
+description = "Enables the set_light command without any pre-configured scope."
+commands.allow = ["set_light"]
+
+[[permission]]
+identifier = "deny-set-light"
+description = "Denies the set_light command without any pre-configured scope."
+commands.deny = ["set_light"]

@@ -1,0 +1,28 @@
+/* From Toolbox (crates/ui/styles/type.css), kept in step with it. Gryphon's own rules are in kit.css. */
+/* ------------------------------------------------------------------
+   Layer 3 — named type roles. The portfolio's roles at the app's fixed
+   sizes: a desktop window has no viewport ladder, so each role is one row
+   of the cell table in app.css. Sizes are literals on purpose.
+
+   role         face             size / line-height   cell
+   .blackletter Jacquard 24      family only, lh 1
+   .display     PARC Pixel Bold  41.25 / 48           3     home index, hero titles
+   .display-s   PARC Pixel Bold  27.5 / 32            2     screen and card titles
+   .body        Jersey 15        27 / 32              1     text, names, files, values
+   .lbl         PARC Pixel       12.5 / 16            2     labels, nav, buttons, settings
+   .mono        Press Start 2P   16 / 16              2     the readout, arrows, cursors
+   .mono-s      Press Start 2P   8 / 16               1     counts beside a label
+   .dim         —                opacity only
+   ------------------------------------------------------------------ */
+.blackletter{font-family:var(--face-blackletter);font-weight:400;line-height:1}
+.display{font-family:var(--face-display);font-weight:700;font-size:41.25px;line-height:48px;text-transform:uppercase}
+.display-s{font-family:var(--face-display);font-weight:700;font-size:27.5px;line-height:32px;text-transform:uppercase}
+.body{font-family:var(--face-text);font-size:27px;line-height:32px;text-transform:none}
+.lbl{font-family:var(--face-label);font-size:12.5px;line-height:16px;text-transform:uppercase}
+.mono{font-family:var(--face-mono);font-size:16px;line-height:16px;text-transform:uppercase;white-space:nowrap}
+.mono-s{font-family:var(--face-mono);font-size:8px;line-height:16px;text-transform:uppercase;white-space:nowrap}
+.dim{opacity:var(--dim)}
+.alert{color:var(--alert)}
+.warn{color:var(--warn)}
+.accent{color:var(--accent-text)}
+.nowrap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}

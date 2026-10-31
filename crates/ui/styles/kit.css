@@ -1,0 +1,115 @@
+/* ------------------------------------------------------------------
+   Gryphon's blocks. The first half is Toolbox's (blocks.css and
+   design.css there): only the pieces this app uses, with Tim's approved
+   redesigns (batches A to C) already folded in. The second half is the
+   rows this app adds, built from the same tokens.
+   ------------------------------------------------------------------ */
+
+/* --- batch A: dim text passes AA on both grounds; light-theme red reaches 4.97:1 --- */
+:root{--dim:.62}
+:root[data-theme=light]{--alert:#bf3a17}
+:focus-visible{outline-color:var(--fg)}
+
+/* --- cursor and glyphs --- */
+.cursor{display:inline-block;flex:none;width:8px;height:16px;background:var(--accent);margin-left:var(--s1)}
+.motion .cursor{animation:blink var(--tick-cursor) steps(2,jump-none) infinite}
+.glyph{display:inline-block;flex:none;font-family:var(--face-mono);font-size:16px;line-height:16px;white-space:nowrap;text-transform:uppercase}
+
+/* --- action blocks: yellow is the primary and where you are, nothing else --- */
+.cta{display:inline-flex;align-items:center;gap:var(--s2);padding:var(--s1) var(--s2);background:var(--accent);color:var(--on-accent);white-space:nowrap}
+.cta:hover:not(:disabled),.cta:focus-visible{background:var(--fg);color:var(--paper)}
+.cta:disabled{background:var(--accent);color:var(--on-accent);opacity:.35}
+.btn{display:inline-flex;align-items:center;gap:var(--s1);padding:var(--s1) var(--s2);white-space:nowrap;min-width:0;background:var(--surface-card)}
+.btn:hover:not(:disabled),.btn:focus-visible{background:var(--fg);color:var(--paper)}
+.btn:disabled{opacity:var(--dim)}
+/* PARC Pixel's caps sit one pixel high in a centred 32px button: 9 above, 7 below */
+.btn.lbl,.cta.lbl{padding-top:9px;padding-bottom:7px}
+:root[data-theme=light] .cta:not(:disabled),:root[data-theme=light] .side-row[aria-current]{box-shadow:inset 0 0 0 1px rgb(0 0 0/.14)}
+
+/* --- fields: text on the ground with a dithered baseline --- */
+.field{display:block;width:100%;height:var(--s4);padding:0 var(--s1);border:0;outline:0;color:var(--fg);background:none;background-image:repeating-conic-gradient(color-mix(in srgb,var(--fg) 30%,transparent) 0 25%,transparent 0 50%);background-size:4px 4px;background-repeat:repeat-x;background-position:0 100%}
+.field:hover{background-image:repeating-conic-gradient(color-mix(in srgb,var(--fg) 50%,transparent) 0 25%,transparent 0 50%)}
+.field:focus{outline:2px solid var(--fg);outline-offset:0;background-image:none}
+.field::placeholder{color:var(--fg);opacity:var(--dim)}
+
+/* --- the sidebar's switch: a drawn track, filled when on --- */
+.switch-mark{position:relative;flex:none;box-sizing:border-box;width:32px;height:16px;margin-left:auto;border:2px solid currentColor;background:var(--surface-card);opacity:var(--dim)}
+.switch-mark::after{content:'';position:absolute;top:2px;left:2px;width:8px;height:8px;background:currentColor}
+.switch-mark.on{opacity:1;background:currentColor}
+.switch-mark.on::after{left:auto;right:2px;background:var(--paper)}
+.side-row:hover .switch-mark,.side-row:focus-visible .switch-mark{opacity:1}
+.side-row:hover .switch-mark:not(.on),.side-row:focus-visible .switch-mark:not(.on){background:none}
+.side-row:hover .switch-mark.on::after,.side-row:focus-visible .switch-mark.on::after{background:var(--fg)}
+
+/* --- the header: the route in the label face, the start cut when it is long --- */
+.readout .path-text{direction:rtl;text-align:left}
+.readout .path-text .sep{padding:0 .6em}
+.readout .cursor{width:6px;height:12px}
+.readout .st-state:empty{display:none}
+
+/* --- notes, warnings and failures --- */
+/* a note is a sentence: the reading face; labels keep the pixel caps */
+.lbl.note{font-family:var(--face-text);font-size:22px;line-height:24px;text-transform:none}
+.notice{display:inline-block;padding:var(--s1) var(--s2);background:var(--paper);color:var(--fg);max-width:100%}
+/* a warning is not "on": the words in the type colour after an inverted ! */
+.warn,.notice.warn{color:var(--fg)}
+.warn::before,.failed::before{content:'!';display:inline-block;width:16px;margin-right:var(--s1);background:var(--fg);color:var(--paper);text-align:center;font-family:var(--face-label);font-size:12.5px;line-height:16px;text-indent:0}
+.failed{color:var(--alert)}
+.failed::before{background:var(--alert)}
+.notice.warn{padding-left:0}
+
+/* --- the bottom bar: the check left, what is happening centred, the primary right --- */
+.toolbar{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;align-items:center}
+.toolbar.has-status{gap:var(--s3)}
+.toolbar .status{display:flex;align-items:center;justify-content:center;gap:var(--s2);min-width:0}
+/* two lines of the label face fill the 32px the buttons take, so a sentence has room before it is cut */
+.toolbar .status .msg{min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-align:center}
+.bar{display:block;width:96px;height:4px;flex:none;background:color-mix(in srgb,var(--fg) 30%,transparent)}
+.bar>span{display:block;height:100%;background:var(--fg)}
+
+/* --- page head: a small label, the title, one line --- */
+.page-head{display:flex;flex-direction:column;gap:var(--s1);padding-bottom:var(--s3);max-width:720px}
+.facts{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--s2);min-width:0}
+
+/* --- hover-revealed controls: in the DOM so keyboard focus reaches them --- */
+.reveal-item{opacity:0}
+.reveal-scope:hover .reveal-item,.reveal-scope:focus-within .reveal-item,.reveal-item:focus-visible{opacity:1}
+
+
+/* ================================================================================================
+   Gryphon
+   ================================================================================================ */
+
+.app-main>.screen-body{flex:1}
+.screen-body>.facts,.screen-body>.notice{margin-bottom:var(--s2)}
+.empty-note{padding:var(--s2) 0}
+
+/* --- an addon: number, what it is, its version, what can be done. Like the portfolio's Work
+       index: no rules between rows, the space does it --- */
+.addons,.folders{display:flex;flex-direction:column}
+.addon{display:grid;grid-template-columns:var(--s4) minmax(0,1fr) 168px 128px;gap:var(--s2);align-items:start;padding:var(--s2) 0}
+.addon .num{padding-top:var(--s1)}                    /* centred on the name's 32px line */
+.addon .what{display:flex;flex-direction:column;min-width:0}
+.addon .what h2{min-width:0}
+.addon .facts{flex-direction:column;align-items:flex-start;gap:0;padding-top:var(--s1)}
+.addon .facts .new{background:var(--fg);color:var(--paper);padding:0 4px;margin-left:-4px}
+.addon .act{display:flex;flex-direction:column;align-items:flex-end;gap:var(--s1)}
+.addon .act .btn{min-width:96px;justify-content:center}
+
+/* an install under way: whole 8px cells of a 112px meter, the step under it */
+.meter-cell{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:var(--s1)}
+.meter{display:block;width:112px;height:16px;background:var(--surface-card)}
+.meter>span{display:block;height:100%;background:var(--fg)}
+
+/* --- adding from GitHub, and the token: a field and its button on one line --- */
+.add-row{display:flex;align-items:flex-end;gap:var(--s2);max-width:720px;padding-bottom:var(--s2)}
+.add-row .field{flex:1;min-width:0}
+
+/* --- the other folders: the name, whether Forever loads it, its interface numbers --- */
+.folder{display:grid;grid-template-columns:minmax(0,1fr) 224px 128px;gap:var(--s2);align-items:start;padding:var(--s1) 0}
+.folder>.lbl{padding-top:var(--s1)}
+
+/* --- settings: sections down one column --- */
+.set{display:flex;flex-direction:column;gap:var(--s1);max-width:720px;padding-bottom:var(--s4)}
+.set-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) var(--s2);padding-top:var(--s1)}
+.path-line{overflow-wrap:anywhere}

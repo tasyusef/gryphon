@@ -1,0 +1,6 @@
+target/
+crates/ui/dist/
+crates/app/gen/
+.DS_Store
+.claude/
+screenshots/

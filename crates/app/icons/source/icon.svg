@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="1024" height="1024" shape-rendering="crispEdges">
+  <!-- Gryphon: a plus in the type colour and the yellow cursor, on ink. 64px cells. -->
+  <rect width="16" height="16" fill="#11110e"/>
+  <path fill="#f4f4f0" d="M5 3h3v3h3v3H8v3H5V9H2V6h3z"/>
+  <rect x="12" y="9" width="2" height="4" fill="#f2d600"/>
+</svg>

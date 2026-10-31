@@ -1,0 +1,10 @@
+[package]
+name = "gryphon-shared"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The types the native side and the WASM UI both read: plain serde structs, no IO.
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }

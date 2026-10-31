@@ -1,0 +1,65 @@
+/* macOS WebKit only. boot.js adds this sheet after styles/ when the page runs in WKWebView
+   (the Tauri build); Chromium never loads it. The UI was matched against the TS app in
+   Chromium, so these rules take WebKit's own rendering differences back out. They change no
+   design: styles/ stays the TS app's CSS, verbatim. DECISIONS.md rule 11. */
+
+/* Baselines. Chromium rounds a font's ascent and descent to whole pixels for the line box;
+   WebKit keeps CoreText's fractions and floors the ascent to 1/64 px. At the app's sizes that
+   puts WebKit's baseline just above Chromium's, and the glyphs land a pixel higher wherever
+   it rounds the other way: Jersey 15 (.body, 23.484 for 23.5), the wordmark (on a half-pixel
+   top) and PARC Pixel Bold (.display on one). PARC Pixel (.lbl, 11.75 for 11.5) is the other
+   way round, which shifts baseline-aligned boxes and adds up down long lists. WebKit ignores
+   ascent-override, so these faces are the same fonts with the ascender and descender moved a
+   unit or a few (webkit/patch-fonts.mjs) until WebKit's baselines are Chromium's. The glyphs
+   are unchanged. Same descriptors as styles/, so these later faces replace those. */
+@font-face {
+  font-family: 'Jacquard 24';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(/webkit/fonts/jacquard-24-latin-ext-400-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Jacquard 24';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(/webkit/fonts/jacquard-24-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Jersey 15';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(/webkit/fonts/jersey-15-latin-ext-400-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Jersey 15';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(/webkit/fonts/jersey-15-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{font-family:'PARC Pixel Web';src:url('/webkit/fonts/parc-pixel.woff2') format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'PARC Pixel Bold Web';src:url('/webkit/fonts/parc-pixel-bold.woff2') format('woff2');font-weight:700;font-display:block}
+
+/* Where the two engines' UA sheets differ under the app's CSS. Chromium gives form controls
+   text-rendering:auto; WebKit's let them inherit :root's optimizeSpeed, which turns kerning
+   off in buttons and fields. WebKit rounds a select's corners (5px), clipping the .field
+   underline's ends, and a colour well's swatch. Zero specificity, as UA rules lose to the
+   app's own. */
+:where(button, input, select, textarea) { text-rendering: auto }
+:where(select) { border-radius: 0 }
+:where(input[type=color])::-webkit-color-swatch { border-radius: 0 }
+
+/* Selection. WebKit reads only the prefixed property (CSS.supports('user-select', 'none') is
+   false in macOS 27's WebKit), so base.css's `body{user-select:none}` never applied here: every
+   label in the app could be selected, and clicking or dragging on the textures highlighted
+   whatever text was near. Chromium (Windows, the TS app) honours it. The same two rules,
+   prefixed: chrome does not select, .selectable data does, fields still edit. */
+body { -webkit-user-select: none }
+.selectable { -webkit-user-select: text }

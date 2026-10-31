@@ -1,0 +1,16 @@
+[package]
+name = "gryphon-cli"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# `gryphon`: the same engine as the app, from a terminal.
+
+[[bin]]
+name = "gryphon"
+path = "src/main.rs"
+
+[dependencies]
+gryphon-core.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde_json = "1"

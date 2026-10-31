@@ -1,5 +1,6 @@
 # Windows and Linux builds of Gryphon, made on GitHub's runners. The Mac build is made and
-# signed on Tim's Mac instead (crates/app/scripts/package-macos.sh).
+# signed on Tim's Mac instead (crates/app/scripts/package-macos.sh). The same Windows and
+# Linux files can be made on the Mac too, with package-windows.sh and package-linux.sh.
 #
 # Run it with `gh workflow run release.yml --ref <branch or tag>`; a `v*` tag runs it too.
 # `gh run download <run id> -D target/dist` puts the installers in target/dist/.

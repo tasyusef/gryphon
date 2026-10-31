@@ -1,4 +1,4 @@
-<img src="crates/app/icons/128x128@2x.png" width="96" alt="Gryphon's icon: a pixel gryphon head with a yellow beak">
+<img src="crates/app/icons/128x128@2x.png" width="96" alt="Gryphon's icon: a yellow blackletter pixel G on a dark tile">
 
 # Gryphon
 

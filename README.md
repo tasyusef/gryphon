@@ -1,8 +1,14 @@
+<img src="crates/app/icons/128x128@2x.png" width="96" alt="Gryphon's icon: a pixel gryphon head with a yellow beak">
+
 # Gryphon
 
 Gryphon installs and updates addons for World of Warcraft: Forever. It pulls them straight from each addon's GitHub releases, so there's no CurseForge, no Overwolf, no account and no ads.
 
 I made it for me and a few friends ahead of Forever's launch. It's small on purpose. You pick an addon, it grabs the Forever build, and it keeps it up to date after that.
+
+![The Picks screen, listing OpenMap, Questie, DialogueUI and Spoken with their versions and install buttons](screenshots/1-picks.png)
+
+There are a few more screenshots in the `screenshots` folder, including the light theme.
 
 ## What it does
 

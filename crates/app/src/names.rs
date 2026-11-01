@@ -12,9 +12,13 @@ pub const COMMANDS: &[&str] = &[
     "choose_game_folder",
     "auto_game_folder",
     "open_folder",
+    "open_github",
     "settings",
     "set_light",
     "set_token",
+    "check_app_update",
+    "install_app_update",
+    "restart_app",
 ];
 
 #[cfg(test)]

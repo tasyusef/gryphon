@@ -5,6 +5,7 @@ mod bridge;
 mod demo;
 mod screens;
 mod text;
+mod updates;
 
 fn main() {
     leptos::mount::mount_to_body(app::App);

@@ -7,6 +7,8 @@ pub fn answer(command: &str) -> Result<Value, String> {
     match command {
         "library" | "check_updates" => Ok(library()),
         "settings" => Ok(json!({ "wow_path": null, "has_token": false, "light": false })),
+        // The preview is always the newest version.
+        "check_app_update" => Ok(Value::Null),
         _ => Err("This is the browser preview. Open the Gryphon app to change addons.".into()),
     }
 }

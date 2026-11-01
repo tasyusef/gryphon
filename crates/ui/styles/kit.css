@@ -96,6 +96,15 @@
 .addon .act{display:flex;flex-direction:column;align-items:flex-end;gap:var(--s1)}
 .addon .act .btn{min-width:96px;justify-content:center}
 
+/* the name opens the addon's page, and its hit area covers the whole row; the actions and a
+   failure's words sit above it so they still click and select */
+.addon{position:relative}
+.addon .open{display:inline-block;vertical-align:top;max-width:calc(100% + 8px);padding:0 4px;margin-left:-4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.addon .open::after{content:'';position:absolute;inset:0}
+.addon .act,.addon .failed{position:relative;z-index:1}
+.addon:hover .open,.addon .open:focus-visible{background:var(--fg);color:var(--paper)}
+.addon .open:focus-visible{outline:0}
+
 /* an install under way: whole 8px cells of a 112px meter, the step under it */
 .meter-cell{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:var(--s1)}
 .meter{display:block;width:112px;height:16px;background:var(--surface-card)}
@@ -113,3 +122,24 @@
 .set{display:flex;flex-direction:column;gap:var(--s1);max-width:720px;padding-bottom:var(--s4)}
 .set-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) var(--s2);padding-top:var(--s1)}
 .path-line{overflow-wrap:anywhere}
+
+/* --- a section's label, and its ?: the longer story beside it, on hover or focus --- */
+.set-head{display:flex;align-items:center;gap:var(--s1)}
+.tip{position:relative;display:inline-flex}
+.tip-mark{width:16px;height:16px;background:var(--fg);color:var(--paper);text-align:center;opacity:var(--dim)}
+.tip:hover .tip-mark,.tip-mark:focus-visible{opacity:1}
+.tip-body{display:none;position:absolute;z-index:var(--z-float);top:-4px;left:calc(100% + var(--s1));width:max-content;max-width:400px;padding:var(--s1) var(--s2);background:var(--fg);color:var(--paper)}
+.tip:hover .tip-body,.tip:focus-within .tip-body{display:block}
+
+/* --- an addon's own page: the way back over the title, its actions, what it does, its release --- */
+.back{display:inline-flex;align-items:center;gap:var(--s1);align-self:flex-start}
+.back:hover,.back:focus-visible{opacity:1}
+.page-act{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--s1) var(--s2);padding-bottom:var(--s4)}
+.page-act .meter-cell{align-items:flex-start;padding-top:0}
+.page-failed{max-width:720px;margin-top:calc(-1 * var(--s2));padding-bottom:var(--s4)}
+.points{display:flex;flex-direction:column;gap:var(--s1);margin:0;padding:0;list-style:none}
+.points li{position:relative;padding-left:var(--s3)}
+.points li::before{content:'';position:absolute;left:0;top:8px;width:8px;height:8px;background:var(--fg);opacity:var(--dim)}
+.spec{display:grid;grid-template-columns:160px minmax(0,1fr);align-items:baseline;gap:var(--s1) var(--s2);margin:0}
+.spec dd{margin:0;overflow-wrap:anywhere}
+.spec .new{background:var(--fg);color:var(--paper);padding:0 4px;margin-left:var(--s2)}

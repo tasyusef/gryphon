@@ -11,6 +11,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_json::{Value, json};
 
+use crate::updates::Updates;
 use crate::{bridge, screens, text};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +47,10 @@ pub struct Kit {
     pub library: RwSignal<Option<Library>>,
     pub settings: RwSignal<SettingsInfo>,
     pub screen: RwSignal<Screen>,
+    /// The addon whose own page is open over the screen's list.
+    pub detail: RwSignal<Option<String>>,
+    /// Where the list was scrolled to when that page opened.
+    list_scroll: RwSignal<i32>,
     /// An install, update, removal or check is running; the actions wait.
     pub busy: RwSignal<bool>,
     pub checking: RwSignal<bool>,
@@ -57,6 +62,8 @@ pub struct Kit {
     pub status: RwSignal<(String, Tone)>,
     /// The bottom bar's meter, 0 to 1, while a download runs.
     pub meter: RwSignal<Option<f64>>,
+    /// The sidebar's row for updates to Gryphon itself.
+    pub updates: Updates,
 }
 
 /// What one run of installs did, for the bottom bar's last word.
@@ -72,13 +79,41 @@ impl Kit {
             library: RwSignal::new(None),
             settings: RwSignal::new(SettingsInfo::default()),
             screen: RwSignal::new(Screen::Picks),
+            detail: RwSignal::new(None),
+            list_scroll: RwSignal::new(0),
             busy: RwSignal::new(false),
             checking: RwSignal::new(false),
             steps: RwSignal::new(BTreeMap::new()),
             failures: RwSignal::new(BTreeMap::new()),
             status: RwSignal::new((String::new(), Tone::Quiet)),
             meter: RwSignal::new(None),
+            updates: Updates::new(),
         }
+    }
+
+    pub fn go(self, screen: Screen) {
+        self.detail.set(None);
+        self.screen.set(screen);
+    }
+
+    /// An addon's own page, from the top.
+    pub fn open_addon(self, id: String) {
+        self.list_scroll.set(screen_body().map_or(0, |b| b.scroll_top()));
+        self.detail.set(Some(id));
+        if let Some(body) = screen_body() {
+            body.set_scroll_top(0);
+        }
+    }
+
+    /// Back to the list, where it was.
+    pub fn close_addon(self) {
+        self.detail.set(None);
+        let top = self.list_scroll.get_untracked();
+        request_animation_frame(move || {
+            if let Some(body) = screen_body() {
+                body.set_scroll_top(top);
+            }
+        });
     }
 
     pub fn has_game(&self) -> bool {
@@ -275,6 +310,14 @@ impl Kit {
         });
     }
 
+    pub fn open_github(self, repo: String) {
+        spawn_local(async move {
+            if let Err(e) = bridge::call::<()>("open_github", json!({ "repo": repo }), None).await {
+                self.say(e, Tone::Alert);
+            }
+        });
+    }
+
     pub fn set_light(self, light: bool) {
         self.settings.update(|s| s.light = light);
         spawn_local(async move {
@@ -294,6 +337,11 @@ impl Kit {
             }
         });
     }
+}
+
+/// The scrolling column the screens sit in.
+fn screen_body() -> Option<web_sys::Element> {
+    document().query_selector(".screen-body").ok().flatten()
 }
 
 #[component]
@@ -324,13 +372,20 @@ pub fn App() -> impl IntoView {
             <span class="dim">{place}</span>
             <span class="sep dim">"/"</span>
             <span>{move || kit.screen.get().name()}</span>
+            {move || {
+                let name = kit.detail.get().and_then(|id| kit.library.with(|l| l.as_ref()?.addons.iter().find(|a| a.id == id).map(|a| a.name.clone())));
+                name.map(|name| view! {
+                    <span class="sep dim">"/"</span>
+                    <span>{name}</span>
+                })
+            }}
         }
     };
 
     view! {
         <div class="app" class:motion=motion>
             <header class="site-header">
-                <button type="button" class="wordmark blackletter" aria-label="Gryphon: picks" on:click=move |_| kit.screen.set(Screen::Picks)>
+                <button type="button" class="wordmark blackletter" aria-label="Gryphon: picks" on:click=move |_| kit.go(Screen::Picks)>
                     "gryphon"
                 </button>
                 " "
@@ -353,11 +408,12 @@ pub fn App() -> impl IntoView {
                 " "
                 <main class="app-main">
                     <div class="scroll pad screen-body">
-                        {move || match kit.screen.get() {
-                            Screen::Picks => view! { <screens::Picks /> }.into_any(),
-                            Screen::Github => view! { <screens::Github /> }.into_any(),
-                            Screen::Folders => view! { <screens::Folders /> }.into_any(),
-                            Screen::Settings => view! { <screens::SettingsScreen /> }.into_any(),
+                        {move || match (kit.screen.get(), kit.detail.get()) {
+                            (Screen::Picks | Screen::Github, Some(id)) => view! { <screens::AddonPage id /> }.into_any(),
+                            (Screen::Picks, None) => view! { <screens::Picks /> }.into_any(),
+                            (Screen::Github, None) => view! { <screens::Github /> }.into_any(),
+                            (Screen::Folders, _) => view! { <screens::Folders /> }.into_any(),
+                            (Screen::Settings, _) => view! { <screens::SettingsScreen /> }.into_any(),
                         }}
                     </div>
                     " "
@@ -387,7 +443,7 @@ fn Sidebar() -> impl IntoView {
                 type="button"
                 class="side-row"
                 aria-current=move || (kit.screen.get() == screen).then_some("page")
-                on:click=move |_| kit.screen.set(screen)
+                on:click=move |_| kit.go(screen)
             >
                 <span class="glyph"></span>
                 <span class="t nowrap">{screen.name()}</span>
@@ -396,6 +452,8 @@ fn Sidebar() -> impl IntoView {
         }
     };
     let light = move || kit.settings.with(|s| s.light);
+    let updates = kit.updates;
+    let update_text = Memo::new(move |_| updates.state.with(|state| state.text()));
 
     view! {
         <aside class="sidebar lbl" aria-label="Navigation">
@@ -415,6 +473,17 @@ fn Sidebar() -> impl IntoView {
                     <span class="glyph"></span>
                     <span class="t">"Dark mode"</span>
                     <span class="switch-mark" class:on=move || !light() aria-hidden="true"></span>
+                </button>
+                " "
+                <button
+                    type="button"
+                    class="side-row"
+                    title=move || update_text.get().1
+                    aria-busy=move || updates.state.with(|state| state.busy()).to_string()
+                    on:click=move |_| updates.click()
+                >
+                    <span class="glyph"></span>
+                    <span class="t nowrap">{move || update_text.get().0}</span>
                 </button>
             </div>
         </aside>

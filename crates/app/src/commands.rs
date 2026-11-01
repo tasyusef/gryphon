@@ -258,6 +258,13 @@ pub fn open_folder(kit: State<'_, Kit>, which: String) -> Answer<()> {
     reveal(&path)
 }
 
+/// Opens an addon's GitHub page in the browser. Only a repo goes in, never a whole address.
+#[tauri::command]
+pub fn open_github(repo: String) -> Answer<()> {
+    let source = Source::parse(&repo).ok_or_else(|| format!("{repo} is not a GitHub repo."))?;
+    reveal(Path::new(&source.url()))
+}
+
 fn reveal(path: &Path) -> Answer<()> {
     #[cfg(target_os = "macos")]
     let opener = "open";

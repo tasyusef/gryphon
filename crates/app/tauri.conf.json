@@ -32,6 +32,16 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU4MUM4ODA5MkM0MDNFQjkKUldTNVBrQXNDWWdjNkdCY054c2NWTkQyU0lCTkFYejk2ZjNkSk1XcVQ5Mm5nWlN4dkUvZjJVZ2IK",
+      "endpoints": ["https://github.com/tasyusef/gryphon/releases/latest/download/latest.json"],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

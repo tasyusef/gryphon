@@ -22,6 +22,16 @@ pub fn in_app() -> bool {
 
 /// Calls `command`. `on_progress` gets each step an install sends while it runs.
 pub async fn call<T: DeserializeOwned>(command: &str, args: Value, on_progress: Option<Box<dyn Fn(Progress)>>) -> Result<T, String> {
+    stream(command, args, on_progress).await
+}
+
+/// [`call`], for a command whose channel sends something other than an addon's [`Progress`]:
+/// Gryphon's own update sends `AppProgress`.
+pub async fn stream<T: DeserializeOwned, P: DeserializeOwned + 'static>(
+    command: &str,
+    args: Value,
+    on_progress: Option<Box<dyn Fn(P)>>,
+) -> Result<T, String> {
     let Some(core) = tauri() else {
         return crate::demo::answer(command).and_then(|v| serde_json::from_value(v).map_err(|e| e.to_string()));
     };
@@ -30,7 +40,7 @@ pub async fn call<T: DeserializeOwned>(command: &str, args: Value, on_progress: 
         let constructor: Function = Reflect::get(&core, &"Channel".into()).map_err(text)?.dyn_into().map_err(text)?;
         let channel = Reflect::construct(&constructor, &Array::new()).map_err(text)?;
         let handler = Closure::<dyn Fn(JsValue)>::new(move |message: JsValue| {
-            if let Some(progress) = from_js::<Progress>(&message) {
+            if let Some(progress) = from_js::<P>(&message) {
                 on_progress(progress);
             }
         });

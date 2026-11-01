@@ -19,6 +19,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2.12", features = [] }
 tauri-plugin-dialog = "2"
+# Updates to Gryphon itself (src/update.rs), over the rustls the addon downloads already use.
+# No zip: the packages are the .app.tar.gz, the installer, the AppImage and the deb as built.
+tauri-plugin-updater = { version = "2.14", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1", features = ["sync"] }
 
 [dev-dependencies]

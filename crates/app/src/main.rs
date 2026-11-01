@@ -7,14 +7,17 @@ mod commands;
 mod ipc_tests;
 mod names;
 mod settings;
+mod update;
 
 use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             app.manage(commands::Kit::new(settings::Settings::load(app.handle())));
+            app.manage(update::Pending::default());
             Ok(())
         })
         // keep in step with names::COMMANDS
@@ -28,9 +31,13 @@ fn main() {
             commands::choose_game_folder,
             commands::auto_game_folder,
             commands::open_folder,
+            commands::open_github,
             commands::settings,
             commands::set_light,
             commands::set_token,
+            update::check_app_update,
+            update::install_app_update,
+            update::restart_app,
         ])
         .run(tauri::generate_context!())
         .expect("Gryphon could not start");

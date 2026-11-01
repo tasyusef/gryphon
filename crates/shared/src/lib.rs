@@ -100,6 +100,9 @@ pub struct Addon {
     pub id: String,
     pub name: String,
     pub blurb: Option<String>,
+    /// What it does, a point at a time, for its own page. Picks only.
+    #[serde(default)]
+    pub about: Vec<String>,
     pub source: Source,
     /// In the built-in catalog.
     pub featured: bool,
@@ -143,6 +146,30 @@ pub struct Progress {
     pub id: String,
     #[serde(flatten)]
     pub step: Step,
+}
+
+/// A newer Gryphon than the one running, from the release feed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AppUpdate {
+    /// The version on offer, `0.2.0`.
+    pub version: String,
+    /// The version running now.
+    pub current: String,
+}
+
+/// How much of a Gryphon update has downloaded, and the whole when the server says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AppProgress {
+    pub downloaded: u64,
+    pub total: Option<u64>,
+}
+
+impl AppProgress {
+    /// Whole percent done, `None` while the size is unknown.
+    pub fn percent(&self) -> Option<u8> {
+        let total = self.total.filter(|t| *t > 0)?;
+        Some((self.downloaded.min(total) * 100 / total) as u8)
+    }
 }
 
 /// The app's settings as the UI sees them. The token itself never goes back to the page.

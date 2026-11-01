@@ -6,7 +6,7 @@ Gryphon installs and updates addons for World of Warcraft: Forever. It pulls the
 
 I made it for me and a few friends ahead of Forever's launch. It's small on purpose. You pick an addon, it grabs the Forever build, and it keeps it up to date after that.
 
-![The Picks screen, listing OpenMap, Questie, DialogueUI and Spoken with their versions and install buttons](screenshots/1-picks.png)
+![The Picks screen, listing OpenMap, Questie and DialogueUI with their versions, all up to date](screenshots/1-picks.png)
 
 There are a few more screenshots in the `screenshots` folder, including the light theme.
 

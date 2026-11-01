@@ -107,32 +107,24 @@ pub fn Github() -> impl IntoView {
     }
 }
 
-/// One addon: its name and what it does, its version, and what can be done with it. While it
-/// installs, the actions give way to its meter.
-#[component]
-fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
-    let kit = expect_context::<Kit>();
-    let id = addon.id.clone();
-    let step = {
-        let id = id.clone();
-        Memo::new(move |_| kit.steps.with(|s| s.get(&id).cloned()))
-    };
-    let failure = {
-        let id = id.clone();
-        Memo::new(move |_| kit.failures.with(|f| f.get(&id).cloned()))
-    };
-    let armed = RwSignal::new(false);
+/// The size an addon downloads at: the last check's, else the catalog's guess.
+fn size_of(addon: &Addon) -> Option<u64> {
+    addon.latest.as_ref().map(|l| l.size).or(addon.size_hint_mb.map(|mb| u64::from(mb) << 20))
+}
 
+/// An addon's version, the newer one when there is one, and where it stands.
+struct Standing {
+    now: String,
+    then: Option<String>,
+    state: Option<String>,
+}
+
+fn standing(addon: &Addon) -> Standing {
     let update = addon.update_available();
-    let size = addon.latest.as_ref().map(|l| l.size).or(addon.size_hint_mb.map(|mb| u64::from(mb) << 20));
-    let big = size.is_some_and(|s| s > BIG_MB << 20);
     let version = |tag: &str| text::version(tag, &addon.source);
-
-    // the version line, and the line under it
     let (now, then) = match (&addon.installed, &addon.latest) {
         (Some(have), Some(latest)) if update => (format!("v{}", version(&have.tag)), Some(format!("New v{}", version(&latest.tag)))),
-        (Some(have), Some(_)) => (format!("v{}", version(&have.tag)), None),
-        (Some(have), None) => (format!("v{}", version(&have.tag)), None),
+        (Some(have), _) => (format!("v{}", version(&have.tag)), None),
         (None, Some(latest)) => (format!("v{}", version(&latest.tag)), None),
         (None, None) => (String::new(), None),
     };
@@ -140,71 +132,50 @@ fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
         (Some(_), Some(_)) if update => None,
         (Some(_), Some(_)) => Some("Up to date".to_string()),
         (Some(_), None) => Some("Installed".to_string()),
-        (None, _) => Some(size.map(|s| text::size(s)).unwrap_or_default()),
+        (None, _) => Some(size_of(addon).map(text::size).unwrap_or_default()),
     };
-    let needs: Vec<String> = addon
-        .needs
-        .iter()
-        .filter(|need| kit.library.with_untracked(|l| l.as_ref().is_some_and(|l| l.addons.iter().any(|a| &a.id == *need && a.installed.is_none()))))
-        .map(|need| kit.library.with_untracked(|l| l.as_ref().and_then(|l| l.addons.iter().find(|a| &a.id == need)).map(|a| a.name.clone())).unwrap_or_else(|| need.clone()))
-        .collect();
-    let problem = addon.problem.clone();
-    let installed = addon.installed.is_some();
-    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.repo.clone());
+    Standing { now, then, state }
+}
 
-    let actions = {
+/// The names of the addons this one installs first. `waiting` keeps only those not installed.
+fn needs_names(kit: Kit, addon: &Addon, waiting: bool) -> Vec<String> {
+    kit.library.with_untracked(|l| {
+        let addons = l.as_ref().map(|l| l.addons.as_slice()).unwrap_or_default();
+        addon
+            .needs
+            .iter()
+            .filter_map(|need| match addons.iter().find(|a| &a.id == need) {
+                Some(a) if waiting && a.installed.is_some() => None,
+                Some(a) => Some(a.name.clone()),
+                None => Some(need.clone()),
+            })
+            .collect()
+    })
+}
+
+/// One addon: its name and what it does, its version, and what can be done with it. The name
+/// opens its own page, and so does a click anywhere else on the row.
+#[component]
+fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let id = addon.id.clone();
+    let failure = {
         let id = id.clone();
-        let size_line = size.map(text::size).unwrap_or_default();
-        move || {
-            if let Some(step) = step.get() {
-                return view! { <Meter step /> }.into_any();
-            }
-            let locked = move || kit.busy.get() || !kit.has_game();
-            let install = {
-                let id = id.clone();
-                let size_line = size_line.clone();
-                move || {
-                    let id = id.clone();
-                    let label = if armed.get() { format!("Get {size_line}?") } else { "Install".to_string() };
-                    view! {
-                        <button
-                            type="button"
-                            class="btn lbl"
-                            disabled=locked
-                            on:blur=move |_| armed.set(false)
-                            on:click=move |_| {
-                                if big && !armed.get_untracked() {
-                                    armed.set(true);
-                                } else {
-                                    armed.set(false);
-                                    kit.install(vec![id.clone()]);
-                                }
-                            }
-                        >
-                            {label}
-                        </button>
-                    }
-                }
-            };
-            if !installed {
-                return install().into_any();
-            }
-            let (update_id, remove_id) = (id.clone(), id.clone());
-            view! {
-                {update.then(|| view! {
-                    <button type="button" class="btn lbl" disabled=locked on:click=move |_| kit.install(vec![update_id.clone()])>"Update"</button>
-                })}
-                <button type="button" class="btn lbl reveal-item" disabled=locked on:click=move |_| kit.remove(remove_id.clone())>"Remove"</button>
-            }
-            .into_any()
-        }
+        Memo::new(move |_| kit.failures.with(|f| f.get(&id).cloned()))
     };
+    let Standing { now, then, state } = standing(&addon);
+    let needs = needs_names(kit, &addon, true);
+    let problem = addon.problem.clone();
+    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.repo.clone());
+    let name = addon.name.clone();
 
     view! {
         <article class="addon reveal-scope">
             <span class="num mono-s dim">{format!("{:02}", n + 1)}</span>
             <div class="what">
-                <h2 class="body nowrap" title=addon.source.url()>{addon.name.clone()}</h2>
+                <h2 class="body">
+                    <button type="button" class="open" on:click=move |_| kit.open_addon(id.clone())>{name}</button>
+                </h2>
                 <p class="lbl note dim">{blurb}</p>
                 {(!needs.is_empty()).then(|| view! { <p class="lbl note dim">{format!("Installs {} first.", needs.join(", "))}</p> })}
                 {move || {
@@ -216,8 +187,170 @@ fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
                 {then.map(|line| view! { <span class="new nowrap">{line}</span> })}
                 {state.map(|line| view! { <span class="dim nowrap">{line}</span> })}
             </div>
-            <div class="act">{actions}</div>
+            <div class="act">
+                <Actions addon reveal=true />
+            </div>
         </article>
+    }
+}
+
+/// What can be done with an addon: install it, or update and remove it. While it installs, they
+/// give way to its meter. `reveal` keeps Remove out of sight until its row is hovered.
+#[component]
+fn Actions(addon: Addon, #[prop(optional)] reveal: bool) -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let id = addon.id.clone();
+    let step = {
+        let id = id.clone();
+        Memo::new(move |_| kit.steps.with(|s| s.get(&id).cloned()))
+    };
+    let armed = RwSignal::new(false);
+    let update = addon.update_available();
+    let size = size_of(&addon);
+    let big = size.is_some_and(|s| s > BIG_MB << 20);
+    let installed = addon.installed.is_some();
+    let size_line = size.map(text::size).unwrap_or_default();
+
+    move || {
+        if let Some(step) = step.get() {
+            return view! { <Meter step /> }.into_any();
+        }
+        let locked = move || kit.busy.get() || !kit.has_game();
+        if !installed {
+            let id = id.clone();
+            let label = if armed.get() { format!("Get {size_line}?") } else { "Install".to_string() };
+            return view! {
+                <button
+                    type="button"
+                    class="btn lbl"
+                    disabled=locked
+                    on:blur=move |_| armed.set(false)
+                    on:click=move |_| {
+                        if big && !armed.get_untracked() {
+                            armed.set(true);
+                        } else {
+                            armed.set(false);
+                            kit.install(vec![id.clone()]);
+                        }
+                    }
+                >
+                    {label}
+                </button>
+            }
+            .into_any();
+        }
+        let (update_id, remove_id) = (id.clone(), id.clone());
+        view! {
+            {update.then(|| view! {
+                <button type="button" class="btn lbl" disabled=locked on:click=move |_| kit.install(vec![update_id.clone()])>"Update"</button>
+            })}
+            <button type="button" class="btn lbl" class:reveal-item=reveal disabled=locked on:click=move |_| kit.remove(remove_id.clone())>"Remove"</button>
+        }
+        .into_any()
+    }
+}
+
+/// An addon's own page: what it does, the facts about its release, and the same actions as its
+/// row. Escape or the label over the title goes back to the list.
+#[component]
+pub fn AddonPage(id: String) -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let escape = window_event_listener(leptos::ev::keydown, move |ev| {
+        if ev.key() == "Escape" {
+            kit.close_addon();
+        }
+    });
+    on_cleanup(move || escape.remove());
+    move || {
+        let addon = kit.library.with(|l| l.as_ref().and_then(|l| l.addons.iter().find(|a| a.id == id).cloned()));
+        match addon {
+            Some(addon) => view! { <AddonDetail addon /> }.into_any(),
+            // removed while its page was open: an addon from GitHub leaves the list with it
+            None => {
+                request_animation_frame(move || kit.close_addon());
+                ().into_any()
+            }
+        }
+    }
+}
+
+#[component]
+fn AddonDetail(addon: Addon) -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let failure = {
+        let id = addon.id.clone();
+        Memo::new(move |_| kit.failures.with(|f| f.get(&id).cloned()))
+    };
+    let back = if addon.featured { "Picks" } else { "From GitHub" };
+    let Standing { now, then, .. } = standing(&addon);
+    let size = size_of(&addon).map(text::size);
+    let released = addon.latest.as_ref().and_then(|l| l.published_at.as_deref()).map(text::date);
+    let folders = addon.installed.as_ref().map(|i| i.folders.join(", ")).filter(|f| !f.is_empty());
+    let needs = needs_names(kit, &addon, false);
+    let problem = addon.problem.clone();
+    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.repo.clone());
+    let repo = addon.source.repo.clone();
+    let about = addon.about.clone();
+    let state = match (&addon.installed, addon.update_available()) {
+        (Some(_), true) => "Installed, with an update waiting",
+        (Some(_), false) => "Installed",
+        (None, _) => "Not installed",
+    };
+
+    view! {
+        <header class="page-head">
+            <button type="button" class="back lbl dim" on:click=move |_| kit.close_addon()>
+                <span class="mono-s" aria-hidden="true">"<"</span>
+                {back}
+            </button>
+            <h1 class="display">{addon.name.clone()}</h1>
+            <p class="lbl note dim">{blurb}</p>
+        </header>
+        <div class="page-act">
+            <Actions addon=addon.clone() />
+            <button type="button" class="btn lbl" on:click={
+                let repo = repo.clone();
+                move |_| kit.open_github(repo.clone())
+            }>"Open on GitHub"</button>
+        </div>
+        {move || failure.get().or_else(|| problem.clone()).map(|message| view! { <p class="lbl note failed selectable page-failed">{message}</p> })}
+        {(!about.is_empty()).then(|| view! {
+            <section class="set">
+                <h2 class="lbl dim">"What it does"</h2>
+                <ul class="points">
+                    {about.into_iter().map(|point| view! { <li class="lbl note">{point}</li> }).collect_view()}
+                </ul>
+            </section>
+        })}
+        <section class="set">
+            <h2 class="lbl dim">"Release"</h2>
+            <dl class="spec">
+                <dt class="lbl dim">"State"</dt>
+                <dd class="lbl note">{state}</dd>
+                {(!now.is_empty()).then(|| view! {
+                    <dt class="lbl dim">"Version"</dt>
+                    <dd class="lbl note">{now}{then.map(|line| view! { <span class="new">{line}</span> })}</dd>
+                })}
+                {size.map(|size| view! {
+                    <dt class="lbl dim">"Download"</dt>
+                    <dd class="lbl note">{size}</dd>
+                })}
+                {released.map(|date| view! {
+                    <dt class="lbl dim">"Released"</dt>
+                    <dd class="lbl note">{date}</dd>
+                })}
+                {(!needs.is_empty()).then(|| view! {
+                    <dt class="lbl dim">"Installs first"</dt>
+                    <dd class="lbl note">{needs.join(", ")}</dd>
+                })}
+                {folders.map(|folders| view! {
+                    <dt class="lbl dim">"In AddOns"</dt>
+                    <dd class="lbl note selectable">{folders}</dd>
+                })}
+                <dt class="lbl dim">"Source"</dt>
+                <dd class="lbl note selectable">{repo}</dd>
+            </dl>
+        </section>
     }
 }
 
@@ -290,6 +423,23 @@ fn FolderRow(folder: Folder) -> impl IntoView {
     }
 }
 
+/// A section's label with a ? beside it that holds the longer story: shown on hover or focus,
+/// and read out as the ?'s description.
+#[component]
+fn SetHead(title: &'static str, id: &'static str, tip: &'static str) -> impl IntoView {
+    view! {
+        <div class="set-head">
+            <h2 class="lbl dim">{title}</h2>
+            <span class="tip">
+                <button type="button" class="tip-mark lbl" aria-label=format!("About {}", title.to_lowercase()) aria-describedby=id>
+                    "?"
+                </button>
+                <span class="tip-body lbl note" role="tooltip" id=id>{tip}</span>
+            </span>
+        </div>
+    }
+}
+
 #[component]
 pub fn SettingsScreen() -> impl IntoView {
     let kit = expect_context::<Kit>();
@@ -307,16 +457,20 @@ pub fn SettingsScreen() -> impl IntoView {
     view! {
         <Head kicker="Gryphon" title="Settings" note="Saved on this computer.".to_string() />
         <section class="set">
-            <h2 class="lbl dim">"Game folder"</h2>
+            <SetHead
+                title="Game folder"
+                id="tip-game"
+                tip="The World of Warcraft folder, the one with _forever_ inside. Gryphon looks in the usual places. If yours is somewhere else, choose it here. If a folder you chose stops opening, plug its drive back in or choose it again."
+            />
             <p class="body selectable path-line">
                 {move || game_root().or_else(|| kit.settings.with(|s| s.wow_path.clone())).unwrap_or_else(|| "Not found".into())}
             </p>
             <p class="lbl note dim">
                 {move || match (chosen(), has_game()) {
                     (true, true) => "Chosen by hand.",
-                    (true, false) => "Chosen by hand, but it no longer opens. Plug its drive back in, choose it again, or find it in the usual places.",
+                    (true, false) => "Chosen by hand, but it no longer opens.",
                     (false, true) => "Found in the usual place.",
-                    (false, false) => "Not in the usual places. Choose the World of Warcraft folder, the one with _forever_ inside.",
+                    (false, false) => "Not in the usual places.",
                 }}
             </p>
             <div class="set-actions">
@@ -325,20 +479,25 @@ pub fn SettingsScreen() -> impl IntoView {
                     <button type="button" class="btn lbl" disabled=move || kit.busy.get() on:click=move |_| kit.auto_folder()>"Find it again"</button>
                 })}
                 <button type="button" class="btn lbl" disabled=move || !has_game() on:click=move |_| kit.open("addons")>"Open AddOns"</button>
+            </div>
+        </section>
+        <section class="set">
+            <SetHead
+                title="Backups"
+                id="tip-backups"
+                tip="Before an update or a removal changes a folder in AddOns, the old copy moves here. The last copy of each folder is kept."
+            />
+            <p class="body selectable path-line">"Interface/.gryphon-backup"</p>
+            <div class="set-actions">
                 <button type="button" class="btn lbl" disabled=move || !has_game() on:click=move |_| kit.open("backup")>"Open backups"</button>
             </div>
         </section>
         <section class="set">
-            <h2 class="lbl dim">"Backups"</h2>
-            <p class="lbl note dim">
-                "Before an update or a removal changes a folder in AddOns, the old copy moves to Interface/.gryphon-backup. The last copy of each folder is kept."
-            </p>
-        </section>
-        <section class="set">
-            <h2 class="lbl dim">"GitHub token"</h2>
-            <p class="lbl note dim">
-                "Optional. Without one, GitHub allows 60 checks an hour from your network, plenty for a few addons. A token with no scopes raises that to 5,000. It is saved in plain text in the app's settings."
-            </p>
+            <SetHead
+                title="GitHub token"
+                id="tip-token"
+                tip="Without one, GitHub allows 60 checks an hour from your network, plenty for a few addons. A token with no scopes raises that to 5,000. It's saved in plain text in the app's settings."
+            />
             {move || {
                 if kit.settings.with(|s| s.has_token) {
                     view! {
@@ -355,8 +514,8 @@ pub fn SettingsScreen() -> impl IntoView {
                                 class="field body"
                                 type="password"
                                 autocomplete="off"
-                                placeholder="github_pat_..."
-                                aria-label="GitHub token"
+                                placeholder="Optional: github_pat_..."
+                                aria-label="GitHub token, optional"
                                 prop:value=move || token.get()
                                 on:input=move |ev| token.set(event_target_value(&ev))
                             />

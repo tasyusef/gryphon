@@ -24,3 +24,14 @@ pub fn version(tag: &str, source: &Source) -> String {
 pub fn count(n: usize, one: &str, many: &str) -> String {
     format!("{n} {}", if n == 1 { one } else { many })
 }
+
+/// A release's date, `2026-10-28T12:00:00Z` → `28 Oct 2026`. Anything else stays as it is.
+pub fn date(iso: &str) -> String {
+    const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let mut parts = iso.get(..10).unwrap_or(iso).split('-');
+    let (Some(year), Some(month), Some(day)) = (parts.next(), parts.next(), parts.next()) else { return iso.to_string() };
+    match (month.parse::<usize>(), day.parse::<u32>()) {
+        (Ok(m @ 1..=12), Ok(d)) => format!("{d} {} {year}", MONTHS[m - 1]),
+        _ => iso.to_string(),
+    }
+}

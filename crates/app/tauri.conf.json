@@ -46,6 +46,7 @@
     "active": true,
     "targets": "all",
     "copyright": "Copyright © 2026 Timothy Ali",
+    "license": "GPL-3.0-or-later",
     "category": "Utility",
     "shortDescription": "WoW Forever addons from GitHub.",
     "longDescription": "Installs and updates World of Warcraft: Forever addons straight from their GitHub releases. No CurseForge, no account, no ads.",

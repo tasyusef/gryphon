@@ -2,6 +2,7 @@
 name = "gryphon-cli"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish.workspace = true
 
 # `gryphon`: the same engine as the app, from a terminal.

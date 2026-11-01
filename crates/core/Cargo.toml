@@ -2,6 +2,7 @@
 name = "gryphon-core"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 publish.workspace = true
 
 # Finding the game, reading TOCs, GitHub releases, and installing. No UI: the CLI and the

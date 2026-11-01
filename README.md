@@ -8,7 +8,35 @@ I made it for me and a few friends ahead of Forever's launch. It's small on purp
 
 ![The Picks screen, listing OpenMap, Questie and DialogueUI with their versions, all up to date](screenshots/1-picks.png)
 
-There are a few more screenshots in the `screenshots` folder, including the light theme.
+There are a few more screenshots in the `screenshots` folder, including the light theme. There's more about it at **[timothyali.com/gryphon](https://www.timothyali.com/gryphon/)**.
+
+## Download
+
+Grab the latest build from the [Releases](../../releases/latest) page. From 0.2.0 on, Gryphon can update itself: click **App updates** at the bottom of the sidebar.
+
+| Platform | File |
+| --- | --- |
+| macOS, Apple silicon and Intel | `Gryphon_<version>_mac-universal.dmg` |
+| Windows, x64 | `Gryphon_<version>_x64-setup.exe` |
+| Linux, x86_64 | `Gryphon_<version>_amd64.AppImage` or `Gryphon_<version>_amd64.deb` |
+
+Every release ships a `SHA256SUMS` file. Run `shasum -a 256 <file>` and compare
+the result with that file's entry in `SHA256SUMS`.
+
+### macOS
+
+Builds are signed with a Developer ID and notarized by Apple. Open the dmg
+and drag Gryphon to Applications.
+
+### Windows
+
+The installer isn't signed yet, so the first time you run it Windows shows a
+blue "Windows protected your PC" box. Click **More info**, then **Run anyway**.
+
+### Linux
+
+The AppImage needs to be executable once: `chmod +x Gryphon_*.AppImage`.
+The deb installs with `sudo dpkg -i Gryphon_*.deb`.
 
 ## What it does
 
@@ -63,4 +91,12 @@ cargo run -p gryphon-cli -- help
 - `crates/ui` is the page inside that window, written in Leptos and built with Trunk.
 - `crates/cli` is the terminal version.
 - `crates/shared` holds the types the app and the page both use.
-- `RESEARCH.md` has my notes from before I started: which addons have Forever builds, and how other managers handle things.
+
+## Tome
+
+Tome, the addon that puts one row of tabs across your Forever windows, lives
+in its own repository at [tasyusef/tome](https://github.com/tasyusef/tome).
+
+## License
+
+Gryphon is free software. You can share it and change it under the GNU General Public License, version 3 or any later version. The full text is in [LICENSE](LICENSE).

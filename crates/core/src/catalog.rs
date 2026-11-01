@@ -1,5 +1,4 @@
-//! The built-in picks: addons checked by hand to have Forever builds on GitHub
-//! (RESEARCH.md, "Your addons").
+//! The built-in picks: addons checked by hand to have Forever builds on GitHub.
 
 use gryphon_shared::Source;
 

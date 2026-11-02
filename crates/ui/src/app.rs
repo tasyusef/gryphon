@@ -386,7 +386,8 @@ pub fn App() -> impl IntoView {
         <div class="app" class:motion=motion>
             <header class="site-header">
                 <button type="button" class="wordmark blackletter" aria-label="Gryphon: picks" on:click=move |_| kit.go(Screen::Picks)>
-                    "gryphon"
+                    <span class="initial">"g"</span>
+                    "ryphon"
                 </button>
                 " "
                 <div class="readout lbl" aria-label="Status">
@@ -445,7 +446,7 @@ fn Sidebar() -> impl IntoView {
                 aria-current=move || (kit.screen.get() == screen).then_some("page")
                 on:click=move |_| kit.go(screen)
             >
-                {marks::rows(screen).map(|rows| view! { <marks::Mark rows /> })}
+                {marks::initial(screen).map(|(letter, tint)| view! { <marks::Mark letter tint /> })}
                 <span class="t nowrap">{screen.name()}</span>
                 <span class="t side-meta dim">{meta}</span>
             </button>

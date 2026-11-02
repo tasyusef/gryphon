@@ -16,7 +16,7 @@ const BIG_MB: u64 = 500;
 fn Head(kicker: &'static str, title: &'static str, #[prop(into)] note: Signal<String>, #[prop(optional)] game: bool) -> impl IntoView {
     view! {
         <header class="page-head">
-            <p class="lbl dim">{kicker}</p>
+            <p class="lbl kicker">{kicker}</p>
             <h1 class="display">{title}</h1>
             <p class="lbl note dim">{note}</p>
             {game.then(|| view! { <GameLine /> })}

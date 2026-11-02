@@ -1,0 +1,75 @@
+/* ------------------------------------------------------------------
+   Illuminated: Gryphon's own look, a page from a scribe's book. Vellum and
+   iron-gall ink, vermilion for the main action and where you are, lapis for
+   what is new, and each list opened by an initial in its own colour
+   (Tim picked "Initials" from the brand boards, 2026-11-02).
+   Loaded after kit.css: Toolbox's sheets stay as they are, and this one
+   recolours and restyles on top of them.
+   ------------------------------------------------------------------ */
+
+/* --- the palette. Dark is the default, a page by candlelight --- */
+:root{
+  --vellum:#efe4cc;
+  --iron-gall:#1d1712;
+  --night:#17120e;
+  --vermilion:#b3301c;      /* 5.0:1 on vellum */
+  --vermilion-lit:#e2553a;  /* 5.0:1 on night */
+  --lapis:#284c99;          /* 6.4:1 on vellum */
+  --lapis-lit:#7f9df0;      /* 7.1:1 on night */
+  --ochre:#7a5a12;
+  --ochre-lit:#d9b45a;
+  --blood:#8e1b12;          /* errors on vellum, 7.2:1 */
+  --blood-lit:#ff6b57;      /* errors on night, 6.6:1 */
+
+  --paper:var(--night);
+  --fg:var(--vellum);
+  --accent:var(--vermilion-lit);
+  --accent-text:var(--vermilion-lit);
+  --field-accent:var(--vermilion-lit);
+  --on-accent:var(--night);
+  --accent-2:var(--lapis-lit);   /* what is new; the GitHub list */
+  --accent-3:var(--ochre-lit);   /* the other folders */
+  --alert:var(--blood-lit);
+  --rule:color-mix(in srgb,var(--fg) 40%,var(--paper));
+}
+/* dim text keeps the 5.1:1 it had on Toolbox's white, and 4.5:1 on the sidebar's dither */
+:root[data-theme=light]{
+  --paper:var(--vellum);
+  --fg:var(--iron-gall);
+  --accent:var(--vermilion);
+  --accent-text:var(--vermilion);
+  --field-accent:var(--vermilion);
+  --on-accent:#f6edd8;
+  --accent-2:var(--lapis);
+  --accent-3:var(--ochre);
+  --alert:var(--blood);
+  --dim:.66;
+}
+
+/* --- the wordmark: its g set in a vermilion box, like an initial --- */
+.wordmark{gap:0}   /* Toolbox spaces a mark from the name; here the initial is part of the word */
+.wordmark .initial{background:var(--accent);color:var(--on-accent);padding:0 5px 0 4px;margin-right:4px}
+
+/* --- the sidebar: each list's initial on its own colour; where you are is a vermilion bar
+       and red words, not a filled block --- */
+.side-mark.init{align-items:center;justify-content:center;font-family:var(--face-blackletter);font-size:24px;line-height:24px;color:var(--on-accent);text-transform:none}
+.side-mark.tint-picks{background:var(--accent)}
+.side-mark.tint-github{background:var(--accent-2)}
+.side-mark.tint-folders{background:var(--accent-3)}
+.side-row[aria-current],:root[data-theme=light] .side-row[aria-current]{background:none;color:var(--accent-text);box-shadow:inset 4px 0 0 var(--accent)}
+
+/* --- page heads: the kicker in red, a double rule under the head --- */
+.kicker{color:var(--accent-text)}
+.page-head::after{content:'';display:block;height:6px;border-top:2px solid var(--rule);border-bottom:2px solid var(--rule)}
+
+/* --- buttons: the main action stays a vermilion block; the rest are words underlined in
+       ink that turn red when reached for --- */
+:root{--underline:linear-gradient(currentColor 0 0) left 0 bottom 4px/100% 2px no-repeat}
+:root[data-theme=light] .cta:not(:disabled){box-shadow:none}
+.btn,.addon:hover .act .btn:not(:hover):not(:focus-visible){background:var(--underline);padding-left:2px;padding-right:2px}
+.btn:hover:not(:disabled),.btn:focus-visible{background:var(--underline);color:var(--accent-text)}
+.addon .act .btn{min-width:0}
+
+/* --- a new version: ruled round in lapis --- */
+.addon .facts .new,.spec .new{background:none;color:var(--accent-2);box-shadow:inset 0 0 0 2px var(--accent-2);padding:0 6px}
+.addon .facts .new{margin-left:-6px}

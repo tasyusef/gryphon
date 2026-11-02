@@ -1508,7 +1508,7 @@ dependencies = [
 
 [[package]]
 name = "gryphon-app"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "gryphon-core",
  "serde",
@@ -1522,7 +1522,7 @@ dependencies = [
 
 [[package]]
 name = "gryphon-cli"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "gryphon-core",
  "serde_json",
@@ -1531,7 +1531,7 @@ dependencies = [
 
 [[package]]
 name = "gryphon-core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "gryphon-shared",
  "reqwest",
@@ -1545,14 +1545,14 @@ dependencies = [
 
 [[package]]
 name = "gryphon-shared"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "gryphon-ui"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "gryphon-shared",
  "js-sys",

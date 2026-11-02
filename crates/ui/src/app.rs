@@ -12,7 +12,7 @@ use leptos::task::spawn_local;
 use serde_json::{Value, json};
 
 use crate::updates::Updates;
-use crate::{bridge, screens, text};
+use crate::{bridge, marks, screens, text};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
@@ -445,7 +445,7 @@ fn Sidebar() -> impl IntoView {
                 aria-current=move || (kit.screen.get() == screen).then_some("page")
                 on:click=move |_| kit.go(screen)
             >
-                <span class="glyph"></span>
+                {marks::rows(screen).map(|rows| view! { <marks::Mark rows /> })}
                 <span class="t nowrap">{screen.name()}</span>
                 <span class="t side-meta dim">{meta}</span>
             </button>
@@ -470,7 +470,6 @@ fn Sidebar() -> impl IntoView {
                 {row(Screen::Settings, Signal::derive(String::new))}
                 " "
                 <button type="button" class="side-row" aria-pressed=move || (!light()).to_string() on:click=move |_| kit.set_light(!light())>
-                    <span class="glyph"></span>
                     <span class="t">"Dark mode"</span>
                     <span class="switch-mark" class:on=move || !light() aria-hidden="true"></span>
                 </button>
@@ -482,7 +481,6 @@ fn Sidebar() -> impl IntoView {
                     aria-busy=move || updates.state.with(|state| state.busy()).to_string()
                     on:click=move |_| updates.click()
                 >
-                    <span class="glyph"></span>
                     <span class="t nowrap">{move || update_text.get().0}</span>
                 </button>
             </div>

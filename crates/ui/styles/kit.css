@@ -67,9 +67,18 @@
 .bar{display:block;width:96px;height:4px;flex:none;background:color-mix(in srgb,var(--fg) 30%,transparent)}
 .bar>span{display:block;height:100%;background:var(--fg)}
 
-/* --- page head: a small label, the title, one line --- */
-.page-head{display:flex;flex-direction:column;gap:var(--s1);padding-bottom:var(--s3);max-width:720px}
+/* --- page head: a small label, the title (its actions beside it while the whole title fits on
+       its line, else under it), one line --- */
+.page-head{display:flex;flex-direction:column;gap:var(--s1);padding-bottom:var(--s2)}
+.page-head>p.note{max-width:720px}
+.page-head .head-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s1) var(--s3)}
+.page-head .head-row>h1{flex:0 1 auto;min-width:0;overflow-wrap:break-word}
+.page-head .head-actions{display:flex;flex-wrap:wrap;gap:var(--s1)}
 .facts{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--s2);min-width:0}
+
+/* --- no 8px jump when a scrollbar appears: WebKit ignores scrollbar-gutter beside the styled
+       ::-webkit-scrollbar, so the bar's room is always kept --- */
+.scroll{overflow-y:scroll}
 
 /* --- hover-revealed controls: in the DOM so keyboard focus reaches them --- */
 .reveal-item{opacity:0}
@@ -81,17 +90,16 @@
    ================================================================================================ */
 
 .app-main>.screen-body{flex:1}
-.screen-body>.facts,.screen-body>.notice{margin-bottom:var(--s2)}
 .empty-note{padding:var(--s2) 0}
 
-/* --- an addon: number, what it is, its version, what can be done. Like the portfolio's Work
-       index: no rules between rows, the space does it --- */
-.addons,.folders{display:flex;flex-direction:column}
-.addon{display:grid;grid-template-columns:var(--s4) minmax(0,1fr) 168px 128px;gap:var(--s2);align-items:start;padding:var(--s2) 0}
-.addon .num{padding-top:var(--s1)}                    /* centred on the name's 32px line */
+/* --- an addon: what it is, its version, what can be done. Like Toolbox's export log: no rules
+       between rows, the space does it, and the row reached for takes the dither. The row's
+       padding hangs into the gutter so its words line up with the page head --- */
+.addons{display:flex;flex-direction:column}
+.addon{display:grid;grid-template-columns:minmax(0,1fr) 168px 128px;gap:var(--s2);align-items:start;padding:var(--s2);margin:0 calc(-1*var(--s2))}
 .addon .what{display:flex;flex-direction:column;min-width:0}
 .addon .what h2{min-width:0}
-.addon .facts{flex-direction:column;align-items:flex-start;gap:0;padding-top:var(--s1)}
+.addon .facts{flex-direction:column;align-items:flex-start;gap:0;padding-top:4px}   /* the version centred on the name's 32px line */
 .addon .facts .new{background:var(--fg);color:var(--paper);padding:0 4px;margin-left:-4px}
 .addon .act{display:flex;flex-direction:column;align-items:flex-end;gap:var(--s1)}
 .addon .act .btn{min-width:96px;justify-content:center}
@@ -99,10 +107,12 @@
 /* the name opens the addon's page, and its hit area covers the whole row; the actions and a
    failure's words sit above it so they still click and select */
 .addon{position:relative}
-.addon .open{display:inline-block;vertical-align:top;max-width:calc(100% + 8px);padding:0 4px;margin-left:-4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.addon .open{display:inline-block;vertical-align:top;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .addon .open::after{content:'';position:absolute;inset:0}
 .addon .act,.addon .failed{position:relative;z-index:1}
-.addon:hover .open,.addon .open:focus-visible{background:var(--fg);color:var(--paper)}
+.addon:hover,.addon:has(.open:focus-visible){background:var(--surface-card)}
+.addon:has(.open:focus-visible){outline:2px solid var(--fg)}
+.addon:hover .act .btn:not(:hover):not(:focus-visible){background:var(--paper)}   /* a button on the dither keeps its edge */
 .addon .open:focus-visible{outline:0}
 
 /* an install under way: whole 8px cells of a 112px meter, the step under it */
@@ -115,11 +125,15 @@
 .add-row .field{flex:1;min-width:0}
 
 /* --- the other folders: the name, whether Forever loads it, its interface numbers --- */
-.folder{display:grid;grid-template-columns:minmax(0,1fr) 224px 128px;gap:var(--s2);align-items:start;padding:var(--s1) 0}
+/* one grid for the list, each row on it (subgrid), so the columns line up and fit their longest
+   words: "Built for another client" stays on one line */
+.folders{display:grid;grid-template-columns:minmax(0,1fr) max-content max-content;column-gap:var(--s4);padding-top:var(--s1)}
+.folder{display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:start;padding:var(--s1) 0}
 .folder>.lbl{padding-top:var(--s1)}
 
 /* --- settings: sections down one column --- */
 .set{display:flex;flex-direction:column;gap:var(--s1);max-width:720px;padding-bottom:var(--s4)}
+.page-head+.set{padding-top:var(--s2)}
 .set-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) var(--s2);padding-top:var(--s1)}
 .path-line{overflow-wrap:anywhere}
 
@@ -131,15 +145,16 @@
 .tip-body{display:none;position:absolute;z-index:var(--z-float);top:-4px;left:calc(100% + var(--s1));width:max-content;max-width:400px;padding:var(--s1) var(--s2);background:var(--fg);color:var(--paper)}
 .tip:hover .tip-body,.tip:focus-within .tip-body{display:block}
 
-/* --- an addon's own page: the way back over the title, its actions, what it does, its release --- */
+/* --- an addon's own page: the way back over the title and its actions, then what it does and
+       its release, each under a heading like Toolbox's project page --- */
 .back{display:inline-flex;align-items:center;gap:var(--s1);align-self:flex-start}
 .back:hover,.back:focus-visible{opacity:1}
-.page-act{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--s1) var(--s2);padding-bottom:var(--s4)}
-.page-act .meter-cell{align-items:flex-start;padding-top:0}
-.page-failed{max-width:720px;margin-top:calc(-1 * var(--s2));padding-bottom:var(--s4)}
+.head-actions .meter-cell{padding-top:0}
+.page-failed{max-width:720px;padding-bottom:var(--s2)}
+.part{display:flex;flex-direction:column;gap:var(--s2);max-width:720px;padding:var(--s2) 0}
 .points{display:flex;flex-direction:column;gap:var(--s1);margin:0;padding:0;list-style:none}
 .points li{position:relative;padding-left:var(--s3)}
 .points li::before{content:'';position:absolute;left:0;top:8px;width:8px;height:8px;background:var(--fg);opacity:var(--dim)}
-.spec{display:grid;grid-template-columns:160px minmax(0,1fr);align-items:baseline;gap:var(--s1) var(--s2);margin:0}
+.spec{display:grid;grid-template-columns:176px minmax(0,1fr);align-items:baseline;gap:var(--s1) var(--s2);margin:0}
 .spec dd{margin:0;overflow-wrap:anywhere}
 .spec .new{background:var(--fg);color:var(--paper);padding:0 4px;margin-left:var(--s2)}

@@ -3,6 +3,7 @@
 mod app;
 mod bridge;
 mod demo;
+mod marks;
 mod screens;
 mod text;
 mod updates;

@@ -1,5 +1,6 @@
 //! The screens: the picks, addons added from GitHub, the other folders in AddOns, and
-//! settings. Each is a page head (a label, the title, one line) over its rows.
+//! settings. Each is a page head (a label, the title, one line, and where the game is) over its
+//! rows.
 
 use gryphon_shared::{Addon, Fit, Folder, Step};
 use leptos::prelude::*;
@@ -10,13 +11,15 @@ use crate::text;
 /// Downloads bigger than this ask once more before they start.
 const BIG_MB: u64 = 500;
 
+/// `game` adds the line saying which game the list is for.
 #[component]
-fn Head(kicker: &'static str, title: &'static str, #[prop(into)] note: Signal<String>) -> impl IntoView {
+fn Head(kicker: &'static str, title: &'static str, #[prop(into)] note: Signal<String>, #[prop(optional)] game: bool) -> impl IntoView {
     view! {
         <header class="page-head">
             <p class="lbl dim">{kicker}</p>
             <h1 class="display">{title}</h1>
             <p class="lbl note dim">{note}</p>
+            {game.then(|| view! { <GameLine /> })}
         </header>
     }
 }
@@ -32,7 +35,7 @@ fn GameLine() -> impl IntoView {
                 let build = game.version.map(|v| format!("WoW Forever {v}")).unwrap_or_else(|| "WoW Forever".into());
                 let root = game.root.clone();
                 view! {
-                    <p class="facts lbl">
+                    <p class="facts lbl note">
                         <span>{build}</span>
                         <span class="dim nowrap selectable" title=root>{game.root}</span>
                     </p>
@@ -40,7 +43,7 @@ fn GameLine() -> impl IntoView {
                 .into_any()
             }
             Some(None) => view! {
-                <p class="notice warn lbl">"WoW Forever was not found. Choose its folder to install addons."</p>
+                <p class="notice warn lbl note">"WoW Forever was not found. Choose its folder to install addons."</p>
             }
             .into_any(),
         })
@@ -52,12 +55,11 @@ pub fn Picks() -> impl IntoView {
     let kit = expect_context::<Kit>();
     let rows = move || {
         kit.library.with(|l| {
-            l.as_ref().map(|l| l.addons.iter().filter(|a| a.featured).cloned().enumerate().map(|(n, addon)| view! { <AddonRow addon n /> }).collect_view())
+            l.as_ref().map(|l| l.addons.iter().filter(|a| a.featured).cloned().map(|addon| view! { <AddonRow addon /> }).collect_view())
         })
     };
     view! {
-        <Head kicker="Picked by hand" title="Picks" note="Checked to have WoW Forever builds on GitHub. Each installs from its own releases.".to_string() />
-        <GameLine />
+        <Head kicker="Picked by hand" title="Picks" note="Checked to have WoW Forever builds on GitHub. Each installs from its own releases.".to_string() game=true />
         <div class="addons">{rows}</div>
     }
 }
@@ -71,7 +73,7 @@ pub fn Github() -> impl IntoView {
         if added.is_empty() {
             return view! { <p class="lbl note dim empty-note">"Nothing added yet."</p> }.into_any();
         }
-        added.into_iter().enumerate().map(|(n, addon)| view! { <AddonRow addon n /> }).collect_view().into_any()
+        added.into_iter().map(|addon| view! { <AddonRow addon /> }).collect_view().into_any()
     };
     let submit = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
@@ -86,8 +88,8 @@ pub fn Github() -> impl IntoView {
             kicker="Any addon"
             title="From GitHub"
             note="Paste an addon's GitHub repo. It installs when a release has a zip built for WoW Forever, and nothing in AddOns changes until that is checked.".to_string()
+            game=true
         />
-        <GameLine />
         <form class="add-row" on:submit=submit>
             <input
                 class="field body"
@@ -156,7 +158,7 @@ fn needs_names(kit: Kit, addon: &Addon, waiting: bool) -> Vec<String> {
 /// One addon: its name and what it does, its version, and what can be done with it. The name
 /// opens its own page, and so does a click anywhere else on the row.
 #[component]
-fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
+fn AddonRow(addon: Addon) -> impl IntoView {
     let kit = expect_context::<Kit>();
     let id = addon.id.clone();
     let failure = {
@@ -171,7 +173,6 @@ fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
 
     view! {
         <article class="addon reveal-scope">
-            <span class="num mono-s dim">{format!("{:02}", n + 1)}</span>
             <div class="what">
                 <h2 class="body">
                     <button type="button" class="open" on:click=move |_| kit.open_addon(id.clone())>{name}</button>
@@ -182,10 +183,10 @@ fn AddonRow(addon: Addon, n: usize) -> impl IntoView {
                     failure.get().or_else(|| problem.clone()).map(|message| view! { <p class="lbl note failed selectable">{message}</p> })
                 }}
             </div>
-            <div class="facts lbl">
-                <span class="nowrap">{now}</span>
-                {then.map(|line| view! { <span class="new nowrap">{line}</span> })}
-                {state.map(|line| view! { <span class="dim nowrap">{line}</span> })}
+            <div class="facts">
+                <span class="lbl note nowrap">{now}</span>
+                {then.map(|line| view! { <span class="lbl note new nowrap">{line}</span> })}
+                {state.map(|line| view! { <span class="lbl dim nowrap">{line}</span> })}
             </div>
             <div class="act">
                 <Actions addon reveal=true />
@@ -303,27 +304,29 @@ fn AddonDetail(addon: Addon) -> impl IntoView {
                 <span class="mono-s" aria-hidden="true">"<"</span>
                 {back}
             </button>
-            <h1 class="display">{addon.name.clone()}</h1>
+            <div class="head-row">
+                <h1 class="display">{addon.name.clone()}</h1>
+                <div class="head-actions">
+                    <Actions addon=addon.clone() />
+                    <button type="button" class="btn lbl" on:click={
+                        let repo = repo.clone();
+                        move |_| kit.open_github(repo.clone())
+                    }>"Open on GitHub"</button>
+                </div>
+            </div>
             <p class="lbl note dim">{blurb}</p>
         </header>
-        <div class="page-act">
-            <Actions addon=addon.clone() />
-            <button type="button" class="btn lbl" on:click={
-                let repo = repo.clone();
-                move |_| kit.open_github(repo.clone())
-            }>"Open on GitHub"</button>
-        </div>
         {move || failure.get().or_else(|| problem.clone()).map(|message| view! { <p class="lbl note failed selectable page-failed">{message}</p> })}
         {(!about.is_empty()).then(|| view! {
-            <section class="set">
-                <h2 class="lbl dim">"What it does"</h2>
+            <section class="part">
+                <h2 class="display-s">"What it does"</h2>
                 <ul class="points">
                     {about.into_iter().map(|point| view! { <li class="lbl note">{point}</li> }).collect_view()}
                 </ul>
             </section>
         })}
-        <section class="set">
-            <h2 class="lbl dim">"Release"</h2>
+        <section class="part">
+            <h2 class="display-s">"Release"</h2>
             <dl class="spec">
                 <dt class="lbl dim">"State"</dt>
                 <dd class="lbl note">{state}</dd>
@@ -395,8 +398,8 @@ pub fn Folders() -> impl IntoView {
             kicker="Already in AddOns"
             title="Other folders"
             note="Folders Gryphon did not install, and whether WoW Forever will load them. It leaves these alone.".to_string()
+            game=true
         />
-        <GameLine />
         <div class="folders">{rows}</div>
     }
 }

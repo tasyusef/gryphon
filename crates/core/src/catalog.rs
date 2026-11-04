@@ -98,6 +98,22 @@ pub const CATALOG: &[Entry] = &[
         needs: &["spoken"],
         size_hint_mb: 1479,
     },
+    Entry {
+        id: "tome",
+        name: "Tome",
+        blurb: "One row of tabs on the windows you open most, so each is a click from the others.",
+        about: &[
+            "Character, Spellbook, Talents, Guild, Collections and Group Finder all get the same tabs.",
+            "A Bags tab opens your bags next to whatever you have up.",
+            "Works in combat. The tabs press the same buttons Blizzard's own menu bar does.",
+            "Set a key for it under Options, Keybindings. It closes what's open, and brings back your last tab.",
+            "Type /tome side to move the tabs down the right, and /tome top to put them back.",
+        ],
+        repo: "tasyusef/tome",
+        tag_prefix: None,
+        needs: &[],
+        size_hint_mb: 1,
+    },
 ];
 
 pub fn find(id: &str) -> Option<&'static Entry> {

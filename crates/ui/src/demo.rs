@@ -37,6 +37,8 @@ fn library() -> Value {
     spoken["latest"] = latest("spoken/v3.6.0", 68);
     let mut voices = pick("spoken-quest-voices", "Spoken quest voices", "English voices for every quest and NPC chat. A big download.", "rusty-key/spoken-wow", Some("quests-audio/v"), &["spoken"], 1479);
     voices["latest"] = latest("quests-audio/v2.4.0", 1410);
+    let mut tome = pick("tome", "Tome", "One row of tabs on the windows you open most, so each is a click from the others.", "tasyusef/tome", None, &[], 1);
+    tome["latest"] = latest("v0.1.0", 1);
     let mut leatrix = json!({
         "id": "leatrix/leatrix-plus", "name": "leatrix-plus", "blurb": null,
         "source": { "repo": "leatrix/leatrix-plus" }, "featured": false, "needs": [], "size_hint_mb": null,
@@ -52,7 +54,7 @@ fn library() -> Value {
             "version": "1.60.1.70707",
             "interface": 16001,
         },
-        "addons": [openmap, questie, dialogue, spoken, voices, leatrix],
+        "addons": [openmap, questie, dialogue, spoken, voices, tome, leatrix],
         "other": [
             { "name": "WeakAuras", "title": "WeakAuras", "version": "5.19.2", "interface": [11507, 50500], "fit": "other_client" },
             { "name": "Details", "title": "Details! Damage Meter", "version": "#Details.20260901", "interface": [16001], "fit": "forever" },

@@ -40,7 +40,7 @@ The deb installs with `sudo dpkg -i Gryphon_*.deb`.
 
 ## What it does
 
-- It comes with a short list of addons I've checked have real Forever builds: OpenMap, Questie, DialogueUI and Spoken, plus Spoken's quest voices.
+- It comes with a short list of addons I've checked have real Forever builds: OpenMap, Questie, DialogueUI and Spoken, plus Spoken's quest voices, and Tome, my own addon that puts tabs on the game's windows.
 - It can install other addons too. Paste the addon's GitHub repo, and as long as a release has a zip built for Forever, Gryphon installs it. Nothing in your AddOns folder changes until that's been checked.
 - It checks for updates and installs them when you say so.
 - Before an update or a removal touches anything, the old copy of the folder goes to `Interface/.gryphon-backup`, so you can always get it back.

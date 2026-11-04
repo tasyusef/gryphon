@@ -33,11 +33,7 @@ ditto -c -k --norsrc --keepParent "$APP" "$DIST/$NAME.zip"
 # signs it. No resource forks or extended attributes, so the copy it unpacks matches the signature.
 rm -f "$DIST/$NAME.app.tar.gz"
 COPYFILE_DISABLE=1 tar -C "${APP:h}" --no-mac-metadata --no-xattrs -czf "$DIST/$NAME.app.tar.gz" Gryphon.app
-STAGE=$(mktemp -d)
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname Gryphon -srcfolder "$STAGE" -ov -format UDZO "$DIST/$NAME.dmg"
-rm -rf "$STAGE"
+"$ROOT/crates/app/scripts/make-dmg.sh" "$APP" "$DIST/$NAME.dmg"
 codesign --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$DIST/$NAME.dmg"
 xcrun notarytool submit "$DIST/$NAME.dmg" --keychain-profile toolbox --wait
 xcrun stapler staple "$DIST/$NAME.dmg"

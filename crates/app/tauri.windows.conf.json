@@ -9,7 +9,11 @@
       },
       "nsis": {
         "installMode": "currentUser",
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/installer/header.bmp",
+        "sidebarImage": "icons/installer/sidebar.bmp",
+        "uninstallerHeaderImage": "icons/installer/header.bmp",
+        "installerHooks": "windows/hooks.nsh"
       }
     }
   }

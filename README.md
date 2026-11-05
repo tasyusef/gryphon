@@ -94,7 +94,7 @@ cargo run -p gryphon-cli -- help
 
 ## Tome
 
-Tome, the addon that puts one row of tabs across your Forever windows, lives
+Tome, the addon that puts one set of tabs beside your Forever windows, lives
 in its own repository at [tasyusef/tome](https://github.com/tasyusef/tome).
 
 ## License

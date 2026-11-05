@@ -37,7 +37,7 @@ fn library() -> Value {
     spoken["latest"] = latest("spoken/v3.6.0", 68);
     let mut voices = pick("spoken-quest-voices", "Spoken quest voices", "English voices for every quest and NPC chat. A big download.", "rusty-key/spoken-wow", Some("quests-audio/v"), &["spoken"], 1479);
     voices["latest"] = latest("quests-audio/v2.4.0", 1410);
-    let mut tome = pick("tome", "Tome", "One row of tabs on the windows you open most, so each is a click from the others.", "tasyusef/tome", None, &[], 1);
+    let mut tome = pick("tome", "Tome", "One set of tabs beside the windows you open most, so each is a click from the others.", "tasyusef/tome", None, &[], 1);
     tome["latest"] = latest("v0.1.0", 1);
     let mut leatrix = json!({
         "id": "leatrix/leatrix-plus", "name": "leatrix-plus", "blurb": null,

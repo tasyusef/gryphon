@@ -12,6 +12,7 @@ pub fn initial(screen: Screen) -> Option<(&'static str, &'static str)> {
         Screen::Picks => Some(("P", "tint-picks")),
         Screen::Github => Some(("G", "tint-github")),
         Screen::Folders => Some(("F", "tint-folders")),
+        Screen::Graphics => Some(("G", "tint-graphics")),
         Screen::Settings => None,
     }
 }
@@ -27,7 +28,7 @@ mod tests {
 
     #[test]
     fn every_list_opens_with_its_own_first_letter() {
-        for screen in [Screen::Picks, Screen::Github, Screen::Folders] {
+        for screen in [Screen::Picks, Screen::Github, Screen::Folders, Screen::Graphics] {
             let (letter, _) = initial(screen).unwrap();
             assert!(screen.name().starts_with(letter), "{screen:?}");
         }

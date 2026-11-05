@@ -137,6 +137,14 @@
 .set-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) var(--s2);padding-top:var(--s1)}
 .path-line{overflow-wrap:anywhere}
 
+/* --- graphics: each setting's number or switch, its range, and the way back --- */
+.tweak{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) var(--s2);padding-top:var(--s1)}
+.tweak .field{flex:none;width:var(--s12);appearance:textfield;-moz-appearance:textfield}
+.tweak .field::-webkit-inner-spin-button,.tweak .field::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.btn .switch-mark{margin-left:0;opacity:1}
+.btn:hover .switch-mark.on::after,.btn:focus-visible .switch-mark.on::after{background:var(--fg)}
+.tweak-save{max-width:720px;padding-bottom:var(--s4)}
+
 /* --- a section's label, and its ?: the longer story beside it, on hover or focus --- */
 .set-head{display:flex;align-items:center;gap:var(--s1)}
 .tip{position:relative;display:inline-flex}

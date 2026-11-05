@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-graphics"
+description = "Enables the graphics command without any pre-configured scope."
+commands.allow = ["graphics"]
+
+[[permission]]
+identifier = "deny-graphics"
+description = "Denies the graphics command without any pre-configured scope."
+commands.deny = ["graphics"]

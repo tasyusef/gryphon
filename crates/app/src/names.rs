@@ -13,6 +13,8 @@ pub const COMMANDS: &[&str] = &[
     "auto_game_folder",
     "open_folder",
     "open_github",
+    "graphics",
+    "set_graphics",
     "settings",
     "set_light",
     "set_token",

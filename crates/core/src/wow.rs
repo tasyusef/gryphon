@@ -60,6 +60,12 @@ impl Game {
         self.interface_dir().join("AddOns")
     }
 
+    /// The game is open: one of the programs in `_forever_` is running.
+    pub fn running(&self) -> bool {
+        let programs = programs_in(&self.client);
+        !programs.is_empty() && any_running(&programs)
+    }
+
     pub fn info(&self) -> GameInfo {
         GameInfo {
             root: self.root.display().to_string(),
@@ -97,6 +103,45 @@ pub fn default_roots() -> Vec<PathBuf> {
         }
     }
     roots
+}
+
+/// The game's programs in its client folder, in lower case: `world of warcraft.app` on a Mac,
+/// an `.exe` on Windows and under Wine.
+fn programs_in(client: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(client) else { return Vec::new() };
+    entries
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().to_ascii_lowercase())
+        .filter(|name| name.ends_with(".app") || name.ends_with(".exe"))
+        .collect()
+}
+
+/// Windows lists programs by name only, so this is any program of that name.
+#[cfg(windows)]
+fn any_running(programs: &[String]) -> bool {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let Ok(out) = std::process::Command::new("tasklist").args(["/FO", "CSV", "/NH"]).creation_flags(CREATE_NO_WINDOW).output() else {
+        return false;
+    };
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|line| line.split(',').next())
+        .any(|name| programs.contains(&name.trim_matches('"').to_ascii_lowercase()))
+}
+
+/// A Mac runs the game from inside its `.app`, and Wine names the `.exe` by its Windows path,
+/// so either shows up in the command line with `_forever_` before it.
+#[cfg(not(windows))]
+fn any_running(programs: &[String]) -> bool {
+    let Ok(out) = std::process::Command::new("ps").args(["-A", "-o", "command="]).output() else {
+        return false;
+    };
+    let wanted: Vec<String> = programs.iter().map(|p| format!("{FOREVER_DIR}/{p}")).collect();
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|line| line.to_ascii_lowercase().replace('\\', "/"))
+        .any(|line| wanted.iter().any(|w| line.contains(w.as_str())))
 }
 
 /// The Forever row's `Version` in `.build.info`, a `|`-separated table whose header names

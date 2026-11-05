@@ -4,6 +4,7 @@
 pub mod catalog;
 mod error;
 pub mod github;
+pub mod graphics;
 pub mod install;
 pub mod library;
 pub mod state;

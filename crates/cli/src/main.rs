@@ -7,6 +7,7 @@ use gryphon_core::github::Client;
 use gryphon_core::shared::{Source, Step};
 use gryphon_core::state::State;
 use gryphon_core::wow::Game;
+use gryphon_core::graphics::{self, Change};
 use gryphon_core::{catalog, install, library};
 
 const HELP: &str = "gryphon: WoW Forever addons from GitHub
@@ -21,6 +22,9 @@ commands:
   update               update everything that has an update
   remove <id>...       take addons out (their folders go to the backup)
   pack [name]          print what is installed as a list to share
+  graphics             the game settings Gryphon can change, and where they stand
+  graphics <setting> <value|back>
+                       change one (the game must be closed), or put it back
 
 --wow takes the World of Warcraft folder or anything inside it. GITHUB_TOKEN is used when set.";
 
@@ -116,6 +120,18 @@ async fn run(mut args: Vec<String>) -> Result<(), String> {
             println!("{}", serde_json::to_string_pretty(&pack).map_err(|e| e.to_string())?);
             Ok(())
         }
+        "graphics" => match rest {
+            [] => show_graphics(&game),
+            [id, value] => {
+                let change = match value.as_str() {
+                    "back" => Change::PutBack,
+                    number => Change::Set(number.parse().map_err(|_| format!("{number} is not a whole number"))?),
+                };
+                graphics::change(&game, &[(id.clone(), change)]).map_err(|e| e.to_string())?;
+                show_graphics(&game)
+            }
+            _ => Err("usage: gryphon graphics <setting> <value|back>".into()),
+        },
         other => Err(format!("unknown command {other}; try `gryphon help`")),
     }
 }
@@ -165,6 +181,20 @@ fn status(game: &Game) -> Result<(), String> {
         for folder in &library.other {
             println!("  {:<32} {:?} {:?}", folder.name, folder.fit, folder.interface);
         }
+    }
+    Ok(())
+}
+
+fn show_graphics(game: &Game) -> Result<(), String> {
+    let graphics = graphics::read(game).map_err(|e| e.to_string())?;
+    if graphics.missing {
+        println!("the game has not saved its settings yet; start it once");
+    } else if graphics.running {
+        println!("the game is open; close it to change these");
+    }
+    for tweak in &graphics.tweaks {
+        let before = tweak.before.map_or(String::new(), |b| format!("was {b}"));
+        println!("{:<22} {:<18} {:>6}  {:>5}-{:<6} {before}", tweak.id, tweak.name, tweak.value, tweak.min, tweak.max);
     }
     Ok(())
 }

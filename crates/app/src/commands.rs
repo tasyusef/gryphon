@@ -9,7 +9,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use gryphon_core::github::{Client, Latest};
-use gryphon_core::shared::{Library, Progress, SettingsInfo, Source, Step};
+use gryphon_core::graphics::{self, Change};
+use gryphon_core::shared::{Graphics, Library, Progress, SettingsInfo, Source, Step};
 use gryphon_core::state::State as Record;
 use gryphon_core::wow::Game;
 use gryphon_core::{catalog, install, library};
@@ -273,6 +274,21 @@ fn reveal(path: &Path) -> Answer<()> {
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let opener = "xdg-open";
     std::process::Command::new(opener).arg(path).spawn().map(drop).map_err(|e| format!("Could not open {}: {e}", path.display()))
+}
+
+/// The game settings Gryphon can change in Config.wtf, and whether the game is open.
+#[tauri::command]
+pub fn graphics(kit: State<'_, Kit>) -> Answer<Graphics> {
+    let game = kit.game().ok_or(NO_GAME)?;
+    graphics::read(&game).map_err(|e| e.to_string())
+}
+
+/// Changes settings in Config.wtf: a number sets one, `null` puts it back the way it was.
+#[tauri::command]
+pub fn set_graphics(kit: State<'_, Kit>, changes: BTreeMap<String, Option<i64>>) -> Answer<Graphics> {
+    let game = kit.game().ok_or(NO_GAME)?;
+    let changes: Vec<(String, Change)> = changes.into_iter().map(|(id, value)| (id, value.map_or(Change::PutBack, Change::Set))).collect();
+    graphics::change(&game, &changes).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

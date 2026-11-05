@@ -9,8 +9,31 @@ pub fn answer(command: &str) -> Result<Value, String> {
         "settings" => Ok(json!({ "wow_path": null, "has_token": false, "light": false })),
         // The preview is always the newest version.
         "check_app_update" => Ok(Value::Null),
-        _ => Err("This is the browser preview. Open the Gryphon app to change addons.".into()),
+        "graphics" => Ok(graphics()),
+        _ => Err("This is the browser preview. Open the Gryphon app to change anything.".into()),
     }
+}
+
+/// The settings as core's `graphics::SETTINGS` has them, with the draw distance changed once.
+fn graphics() -> Value {
+    let tweak = |id: &str, name: &str, about: &str, tip: &str, (min, max, default): (i64, i64, i64), value: i64, before: Option<i64>| {
+        json!({
+            "id": id, "name": name, "about": about, "tip": tip,
+            "min": min, "max": max, "default": default, "toggle": max == 1,
+            "value": value, "before": before,
+        })
+    };
+    json!({
+        "running": false,
+        "missing": false,
+        "tweaks": [
+            tweak("farclip", "Draw distance", "How far away the world is drawn.", "Around 4000 is enough to see Nordrassil on Mount Hyjal from the Barrens. Higher costs frames, and moving the game's own View Distance slider sets it again.", (500, 10000, 7000), 5000, Some(7000)),
+            tweak("groundEffectDensity", "Grass and clutter", "How thick the grass and small plants are.", "48 is the game's usual. 256 is the most it takes, and that can cost frames in busy places. Moving the game's own Ground Clutter slider sets it again.", (16, 256, 48), 48, None),
+            tweak("lodObjectCullSize", "Small objects", "Keeps small things like rocks and fences in view further out. Lower keeps more.", "Anything smaller than this stops being drawn once it's far away. Try 8 to keep most of it.", (0, 40, 18), 18, None),
+            tweak("lodObjectFadeScale", "Detail distance", "How far away buildings and trees keep their full detail.", "100 is the game's usual. 200 keeps the detailed models twice as far out, which costs some frames.", (50, 300, 100), 100, None),
+            tweak("ResampleAlwaysSharpen", "Sharpening", "Sharpens the picture all the time, not only when the game renders below full size.", "The game sharpens on its own when Render Scale is under 100%. This keeps it on at 100% too. It costs next to nothing.", (0, 1, 0), 0, None),
+        ],
+    })
 }
 
 fn library() -> Value {

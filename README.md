@@ -45,6 +45,7 @@ The deb installs with `sudo dpkg -i Gryphon_*.deb`.
 - It checks for updates and installs them when you say so.
 - Before an update or a removal touches anything, the old copy of the folder goes to `Interface/.gryphon-backup`, so you can always get it back.
 - Addons you installed some other way are left alone. Gryphon just lists them and tells you whether Forever will load them.
+- It can change a few graphics settings the game's own menu stops short of: draw distance, grass, small objects, detail distance and sharpening. It changes them in `WTF/Config.wtf` while the game is closed, copies that file to the backup first, and can put each one back the way it was.
 
 It finds the game in the usual place on its own. If yours lives somewhere else, you can point it at the World of Warcraft folder in Settings.
 
@@ -82,7 +83,7 @@ The same engine works without the window:
 cargo run -p gryphon-cli -- help
 ```
 
-`status` shows the game and what's installed, `list` shows the built-in picks, `check` looks for updates, and `install`, `update` and `remove` do what they say. `install` takes a pick's name (like `openmap`) or any GitHub repo. Set `GITHUB_TOKEN` if you want the higher limit here too.
+`status` shows the game and what's installed, `list` shows the built-in picks, `check` looks for updates, and `install`, `update` and `remove` do what they say, and `graphics` shows or changes the graphics settings. `install` takes a pick's name (like `openmap`) or any GitHub repo. Set `GITHUB_TOKEN` if you want the higher limit here too.
 
 ## How it's laid out
 

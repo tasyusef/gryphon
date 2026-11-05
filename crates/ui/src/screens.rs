@@ -1,12 +1,16 @@
-//! The screens: the picks, addons added from GitHub, the other folders in AddOns, and
-//! settings. Each is a page head (a label, the title, one line, and where the game is) over its
+//! The screens: the picks, addons added from GitHub, the other folders in AddOns, the game's
+//! graphics settings, and Gryphon's own settings. Each is a page head (a label, the title, one line, and where the game is) over its
 //! rows.
 
-use gryphon_shared::{Addon, Fit, Folder, Step};
-use leptos::prelude::*;
+use std::collections::BTreeMap;
 
-use crate::app::Kit;
-use crate::text;
+use gryphon_shared::{Addon, Fit, Folder, Graphics, Step, Tweak};
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use serde_json::json;
+
+use crate::app::{Kit, Tone};
+use crate::{bridge, text};
 
 /// Downloads bigger than this ask once more before they start.
 const BIG_MB: u64 = 500;
@@ -429,17 +433,199 @@ fn FolderRow(folder: Folder) -> impl IntoView {
 /// A section's label with a ? beside it that holds the longer story: shown on hover or focus,
 /// and read out as the ?'s description.
 #[component]
-fn SetHead(title: &'static str, id: &'static str, tip: &'static str) -> impl IntoView {
+fn SetHead(#[prop(into)] title: String, #[prop(into)] id: String, #[prop(into)] tip: String) -> impl IntoView {
+    let label = format!("About {}", title.to_lowercase());
     view! {
         <div class="set-head">
             <h2 class="lbl dim">{title}</h2>
             <span class="tip">
-                <button type="button" class="tip-mark lbl" aria-label=format!("About {}", title.to_lowercase()) aria-describedby=id>
+                <button type="button" class="tip-mark lbl" aria-label=label aria-describedby=id.clone()>
                     "?"
                 </button>
                 <span class="tip-body lbl note" role="tooltip" id=id>{tip}</span>
             </span>
         </div>
+    }
+}
+
+/// The game's own settings that its graphics menu stops short of, kept in Config.wtf. Edits wait
+/// for Save; putting one back is right away. Coming back to Gryphon after closing the game
+/// checks again whether it's open.
+#[component]
+pub fn GraphicsScreen() -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let graphics = RwSignal::new(None::<Graphics>);
+    let edits = RwSignal::new(BTreeMap::<String, i64>::new());
+    let saving = RwSignal::new(false);
+
+    let load = move || {
+        spawn_local(async move {
+            match bridge::call::<Graphics>("graphics", json!({}), None).await {
+                Ok(loaded) => graphics.set(Some(loaded)),
+                Err(e) => kit.say(e, Tone::Alert),
+            }
+        })
+    };
+    Effect::new(move |_| {
+        if kit.has_game() {
+            load();
+        }
+    });
+    let focus = window_event_listener(leptos::ev::focus, move |_| {
+        if kit.has_game() && !saving.get_untracked() {
+            load();
+        }
+    });
+    on_cleanup(move || focus.remove());
+
+    let send = move |changes: BTreeMap<String, Option<i64>>, done: &'static str| {
+        saving.set(true);
+        spawn_local(async move {
+            match bridge::call::<Graphics>("set_graphics", json!({ "changes": changes }), None).await {
+                Ok(saved) => {
+                    edits.update(|e| e.retain(|id, _| !changes.contains_key(id)));
+                    graphics.set(Some(saved));
+                    kit.say(done, Tone::Done);
+                }
+                Err(e) => kit.say(e, Tone::Alert),
+            }
+            saving.set(false);
+        });
+    };
+    let locked = Signal::derive(move || saving.get() || graphics.with(|g| g.as_ref().is_none_or(|g| g.running || g.missing)));
+    let out_of_range = move || {
+        graphics.with(|g| {
+            let tweaks = g.as_ref().map(|g| g.tweaks.as_slice()).unwrap_or_default();
+            edits.with(|e| e.iter().any(|(id, v)| tweaks.iter().any(|t| &t.id == id && !(t.min..=t.max).contains(v))))
+        })
+    };
+    let save = move |_| {
+        let changes = edits.get_untracked().into_iter().map(|(id, v)| (id, Some(v))).collect();
+        send(changes, "Saved. The changes take effect next time WoW Forever starts.");
+    };
+
+    let notice = move || {
+        graphics.with(|g| match g {
+            Some(g) if g.missing => Some("WoW Forever hasn't saved its settings yet. Start it once and close it, then come back."),
+            Some(g) if g.running => Some("WoW Forever is open. Close it to change these, since it saves its own settings when it closes."),
+            _ => None,
+        })
+        .map(|line| view! { <p class="notice warn lbl note">{line}</p> })
+    };
+    // built again only when the settings come back from the app, so typing keeps its place
+    let rows = move || {
+        graphics.with(|g| {
+            g.as_ref().map(|g| {
+                g.tweaks
+                    .iter()
+                    .cloned()
+                    .map(|tweak| {
+                        let put_back = move |id: String| send(BTreeMap::from([(id, None)]), "Put back. It takes effect next time WoW Forever starts.");
+                        tweak_row(tweak, edits, locked, put_back)
+                    })
+                    .collect_view()
+            })
+        })
+    };
+
+    view! {
+        <Head
+            kicker="In the game"
+            title="Graphics"
+            note="Settings the game's own graphics menu stops short of. Gryphon changes them while the game is closed, and they take effect next time it starts.".to_string()
+            game=true
+        />
+        {notice}
+        {rows}
+        {move || graphics.with(|g| g.is_some()).then(|| view! {
+            <div class="set-actions tweak-save">
+                <button
+                    type="button"
+                    class="cta lbl"
+                    disabled=move || locked.get() || edits.with(|e| e.is_empty()) || out_of_range()
+                    on:click=save
+                >
+                    "Save changes"
+                </button>
+                <span class="lbl note dim">"Config.wtf is copied to the backups first."</span>
+            </div>
+        })}
+    }
+}
+
+/// One setting: its name and the longer story, what it does, then its number or switch, its
+/// range, and the way back to the game's own value once Gryphon has changed it.
+fn tweak_row(tweak: Tweak, edits: RwSignal<BTreeMap<String, i64>>, locked: Signal<bool>, put_back: impl Fn(String) + Copy + 'static) -> impl IntoView {
+    let Tweak { id, name, about, tip, min, max, toggle, value, before, .. } = tweak;
+    let shown = |n: i64| if toggle { if n == 1 { "on".to_string() } else { "off".to_string() } } else { n.to_string() };
+    let edit = {
+        let id = id.clone();
+        move |n: Option<i64>| {
+            edits.update(|e| match n {
+                Some(n) if n != value => {
+                    e.insert(id.clone(), n);
+                }
+                _ => {
+                    e.remove(&id);
+                }
+            })
+        }
+    };
+    let current = {
+        let id = id.clone();
+        Memo::new(move |_| edits.with(|e| e.get(&id).copied()).unwrap_or(value))
+    };
+    let control = if toggle {
+        let on = move || current.get() == 1;
+        view! {
+            <button
+                type="button"
+                class="btn lbl"
+                aria-pressed=move || on().to_string()
+                aria-label=name.clone()
+                disabled=move || locked.get()
+                on:click=move |_| edit(Some(if on() { 0 } else { 1 }))
+            >
+                <span>{move || if on() { "On" } else { "Off" }}</span>
+                <span class="switch-mark" class:on=on aria-hidden="true"></span>
+            </button>
+        }
+        .into_any()
+    } else {
+        view! {
+            <input
+                class="field body"
+                type="number"
+                inputmode="numeric"
+                min=min
+                max=max
+                step="1"
+                aria-label=name.clone()
+                value=value.to_string()
+                disabled=move || locked.get()
+                on:input=move |ev| edit(event_target_value(&ev).trim().parse().ok())
+            />
+            <span class="lbl dim" class:failed=move || !(min..=max).contains(&current.get())>{format!("{min} to {max}")}</span>
+        }
+        .into_any()
+    };
+    let back = before.map(|before| {
+        let id = id.clone();
+        view! {
+            <button type="button" class="btn lbl" disabled=move || locked.get() on:click=move |_| put_back(id.clone())>
+                {format!("Put back {}", shown(before))}
+            </button>
+        }
+    });
+    view! {
+        <section class="set">
+            <SetHead title=name.clone() id=format!("tip-{}", id.to_lowercase()) tip />
+            <p class="lbl note dim">{about}</p>
+            <div class="tweak">
+                {control}
+                {back}
+            </div>
+        </section>
     }
 }
 
@@ -488,7 +674,7 @@ pub fn SettingsScreen() -> impl IntoView {
             <SetHead
                 title="Backups"
                 id="tip-backups"
-                tip="Before an update or a removal changes a folder in AddOns, the old copy moves here. The last copy of each folder is kept."
+                tip="Before an update or a removal changes a folder in AddOns, the old copy moves here, and so does Config.wtf before a graphics change. The last copy of each is kept."
             />
             <p class="body selectable path-line">"Interface/.gryphon-backup"</p>
             <div class="set-actions">

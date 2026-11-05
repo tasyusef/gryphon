@@ -32,6 +32,8 @@ fn main() {
             commands::auto_game_folder,
             commands::open_folder,
             commands::open_github,
+            commands::graphics,
+            commands::set_graphics,
             commands::settings,
             commands::set_light,
             commands::set_token,

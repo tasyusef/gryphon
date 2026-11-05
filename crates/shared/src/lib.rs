@@ -181,6 +181,38 @@ pub struct SettingsInfo {
     pub light: bool,
 }
 
+/// One of the game's own settings (a CVar) Gryphon can change, and where it stands.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Tweak {
+    /// The CVar, `farclip`.
+    pub id: String,
+    pub name: String,
+    /// What it does, in a line.
+    pub about: String,
+    /// The longer story: what the numbers mean and what they cost.
+    pub tip: String,
+    pub min: i64,
+    pub max: i64,
+    /// What the game uses with nothing set.
+    pub default: i64,
+    /// On or off (1 or 0) rather than a number.
+    pub toggle: bool,
+    /// What Config.wtf says now, or the default when it says nothing.
+    pub value: i64,
+    /// What it was before Gryphon changed it. `None` when Gryphon never did.
+    pub before: Option<i64>,
+}
+
+/// The settings Gryphon can change in Config.wtf.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Graphics {
+    pub tweaks: Vec<Tweak>,
+    /// The game is open. It writes its settings back when it closes, over any change made now.
+    pub running: bool,
+    /// The game hasn't written Config.wtf yet, so there is nothing to change.
+    pub missing: bool,
+}
+
 /// A shareable addon list: what a friend imports to get the same setup.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pack {

@@ -16,6 +16,8 @@
     "allow-auto-game-folder",
     "allow-open-folder",
     "allow-open-github",
+    "allow-graphics",
+    "allow-set-graphics",
     "allow-settings",
     "allow-set-light",
     "allow-set-token",

@@ -19,6 +19,7 @@ pub enum Screen {
     Picks,
     Github,
     Folders,
+    Graphics,
     Settings,
 }
 
@@ -28,6 +29,7 @@ impl Screen {
             Screen::Picks => "Picks",
             Screen::Github => "GitHub",
             Screen::Folders => "Folders",
+            Screen::Graphics => "Graphics",
             Screen::Settings => "Settings",
         }
     }
@@ -126,7 +128,7 @@ impl Kit {
             .unwrap_or_else(|| id.to_string())
     }
 
-    fn say(&self, line: impl Into<String>, tone: Tone) {
+    pub fn say(&self, line: impl Into<String>, tone: Tone) {
         self.status.set((line.into(), tone));
     }
 
@@ -414,6 +416,7 @@ pub fn App() -> impl IntoView {
                             (Screen::Picks, None) => view! { <screens::Picks /> }.into_any(),
                             (Screen::Github, None) => view! { <screens::Github /> }.into_any(),
                             (Screen::Folders, _) => view! { <screens::Folders /> }.into_any(),
+                            (Screen::Graphics, _) => view! { <screens::GraphicsScreen /> }.into_any(),
                             (Screen::Settings, _) => view! { <screens::SettingsScreen /> }.into_any(),
                         }}
                     </div>
@@ -464,6 +467,11 @@ fn Sidebar() -> impl IntoView {
                     {row(Screen::Picks, Signal::derive(move || counts.get().0))}
                     {row(Screen::Github, Signal::derive(move || counts.get().1))}
                     {row(Screen::Folders, Signal::derive(move || counts.get().2))}
+                </section>
+                " "
+                <section class="side-section" aria-label="Game">
+                    <div class="side-label dim">"Game"</div>
+                    {row(Screen::Graphics, Signal::derive(String::new))}
                 </section>
             </div>
             " "

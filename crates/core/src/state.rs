@@ -14,6 +14,10 @@ use crate::wow::Game;
 pub struct State {
     #[serde(default)]
     pub addons: BTreeMap<String, Installed>,
+    /// The game's own value for each setting Gryphon changed in Config.wtf, from before it did,
+    /// keyed by the CVar in lower case. `None` when Config.wtf had no line for it.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub settings: BTreeMap<String, Option<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

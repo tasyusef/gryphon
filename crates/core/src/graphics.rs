@@ -23,6 +23,21 @@ pub struct Setting {
     /// What the game uses when Config.wtf has no line for it.
     pub default: i64,
     pub toggle: bool,
+    /// The screen shows the CVar times this, so a fraction like 1.3 is a whole number (130).
+    pub scale: i64,
+}
+
+impl Setting {
+    /// A Config.wtf value as the screen shows it: `"7000.0"` is 7000, and `"1.300000"` is 130
+    /// when the scale is 100.
+    fn shown(&self, value: &str) -> Option<i64> {
+        value.trim().parse::<f64>().ok().filter(|n| n.is_finite()).map(|n| (n * self.scale as f64).round() as i64)
+    }
+
+    /// The other way: what goes in Config.wtf for a number on the screen.
+    fn written(&self, value: i64) -> String {
+        if self.scale == 1 { value.to_string() } else { (value as f64 / self.scale as f64).to_string() }
+    }
 }
 
 pub const SETTINGS: &[Setting] = &[
@@ -35,6 +50,7 @@ pub const SETTINGS: &[Setting] = &[
         max: 10000,
         default: 7000,
         toggle: false,
+        scale: 1,
     },
     Setting {
         id: "groundEffectDensity",
@@ -45,6 +61,29 @@ pub const SETTINGS: &[Setting] = &[
         max: 256,
         default: 48,
         toggle: false,
+        scale: 1,
+    },
+    Setting {
+        id: "groundEffectDist",
+        name: "Grass distance",
+        about: "How far out grass and small plants are drawn.",
+        tip: "The game's own Ground Clutter slider goes up to 200. 500 fills in hillsides further out, which costs some frames. Moving that slider sets it again.",
+        min: 50,
+        max: 500,
+        default: 70,
+        toggle: false,
+        scale: 1,
+    },
+    Setting {
+        id: "groundEffectFade",
+        name: "Grass fade",
+        about: "Where grass starts to thin out, so it fades away instead of ending in a line.",
+        tip: "70 is the game's usual, even with Ground Clutter at its highest. Keep it a little under Grass distance: 370 goes well with 500.",
+        min: 50,
+        max: 500,
+        default: 70,
+        toggle: false,
+        scale: 1,
     },
     Setting {
         id: "lodObjectCullSize",
@@ -55,6 +94,7 @@ pub const SETTINGS: &[Setting] = &[
         max: 40,
         default: 18,
         toggle: false,
+        scale: 1,
     },
     Setting {
         id: "lodObjectFadeScale",
@@ -65,6 +105,18 @@ pub const SETTINGS: &[Setting] = &[
         max: 300,
         default: 100,
         toggle: false,
+        scale: 1,
+    },
+    Setting {
+        id: "weatherDensity",
+        name: "Weather",
+        about: "How heavy rain and snow look.",
+        tip: "2 is the game's usual and 3 is the heaviest. 0 is the lightest, though weather never goes away completely.",
+        min: 0,
+        max: 3,
+        default: 2,
+        toggle: false,
+        scale: 1,
     },
     Setting {
         id: "ResampleAlwaysSharpen",
@@ -75,6 +127,29 @@ pub const SETTINGS: &[Setting] = &[
         max: 1,
         default: 0,
         toggle: true,
+        scale: 1,
+    },
+    Setting {
+        id: "HDROutput",
+        name: "HDR",
+        about: "Turns on HDR for screens that have it, like OLED and mini-LED.",
+        tip: "Turn HDR on for the screen in your computer's display settings first. If the screen can't show HDR, the game stays as it was.",
+        min: 0,
+        max: 1,
+        default: 0,
+        toggle: true,
+        scale: 1,
+    },
+    Setting {
+        id: "HDRFactor",
+        name: "HDR highlights",
+        about: "How much brighter than normal the brightest spots can get with HDR on.",
+        tip: "200 is the game's usual, twice as bright as without HDR. Try 130 if it looks harsh. Your screen's own limit still caps it.",
+        min: 100,
+        max: 200,
+        default: 200,
+        toggle: false,
+        scale: 100,
     },
 ];
 
@@ -104,8 +179,8 @@ pub fn read(game: &Game) -> Result<Graphics> {
     let tweaks = SETTINGS
         .iter()
         .map(|s| {
-            let value = config.as_ref().and_then(|c| c.get(s.id)).and_then(number).unwrap_or(s.default);
-            let before = state.settings.get(&s.id.to_ascii_lowercase()).map(|v| v.as_deref().and_then(number).unwrap_or(s.default));
+            let value = config.as_ref().and_then(|c| c.get(s.id)).and_then(|v| s.shown(v)).unwrap_or(s.default);
+            let before = state.settings.get(&s.id.to_ascii_lowercase()).map(|v| v.as_deref().and_then(|v| s.shown(v)).unwrap_or(s.default));
             Tweak {
                 id: s.id.to_string(),
                 name: s.name.to_string(),
@@ -151,9 +226,9 @@ pub fn change(game: &Game, changes: &[(String, Change)]) -> Result<Graphics> {
                 for name in names {
                     let key = name.to_ascii_lowercase();
                     let before = state.settings.entry(key.clone()).or_insert_with(|| config.get(&name).map(String::from)).clone();
-                    config.set(&name, Some(&value.to_string()));
+                    config.set(&name, Some(&setting.written(value)));
                     // set back to the game's own value by hand: nothing left to put back
-                    if before.as_deref().and_then(number) == Some(value) {
+                    if before.as_deref().and_then(|v| setting.shown(v)) == Some(value) {
                         state.settings.remove(&key);
                     }
                 }
@@ -185,11 +260,6 @@ fn load(game: &Game) -> Result<Option<Config>> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
     }
-}
-
-/// `"7000"`, or `"7000.0"`, as a whole number.
-fn number(value: &str) -> Option<i64> {
-    value.trim().parse::<f64>().ok().filter(|n| n.is_finite()).map(|n| n.round() as i64)
 }
 
 /// Config.wtf a line at a time, so a change leaves every other line as the game wrote it.
@@ -318,6 +388,17 @@ mod tests {
     }
 
     #[test]
+    fn writes_fractions_the_way_the_game_reads_them() {
+        let (_dir, game) = game_with(Some(CONFIG));
+        assert_eq!(value(&read(&game).unwrap(), "HDRFactor"), (200, None));
+        let changed = change(&game, &[("HDRFactor".into(), Change::Set(130))]).unwrap();
+        assert_eq!(value(&changed, "HDRFactor"), (130, Some(200)));
+        assert!(std::fs::read_to_string(path(&game)).unwrap().ends_with("SET HDRFactor \"1.3\"\r\n"));
+        change(&game, &[("HDRFactor".into(), Change::PutBack)]).unwrap();
+        assert_eq!(std::fs::read_to_string(path(&game)).unwrap(), CONFIG);
+    }
+
+    #[test]
     fn refuses_what_it_does_not_know_or_is_out_of_range() {
         let (_dir, game) = game_with(Some(CONFIG));
         assert!(change(&game, &[("gxApi".into(), Change::Set(1))]).is_err());
@@ -339,7 +420,14 @@ mod tests {
         assert_eq!(set_line("SET farclip \"7000\""), Some(("farclip", "7000")));
         assert_eq!(set_line("  set gxWindow 1"), Some(("gxWindow", "1")));
         assert_eq!(set_line("SETTINGS"), None);
-        assert_eq!(number("7000.4"), Some(7000));
-        assert_eq!(number("MTL"), None);
+        let farclip = find("farclip").unwrap();
+        assert_eq!(farclip.shown("7000.4"), Some(7000));
+        assert_eq!(farclip.shown("MTL"), None);
+        assert_eq!(farclip.written(5000), "5000");
+        let hdr = find("hdrfactor").unwrap();
+        assert_eq!(hdr.shown("1.300000"), Some(130));
+        assert_eq!(hdr.shown("2"), Some(200));
+        assert_eq!(hdr.written(130), "1.3");
+        assert_eq!(hdr.written(200), "2");
     }
 }

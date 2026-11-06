@@ -29,9 +29,14 @@ fn graphics() -> Value {
         "tweaks": [
             tweak("farclip", "Draw distance", "How far away the world is drawn.", "Around 4000 is enough to see Nordrassil on Mount Hyjal from the Barrens. Higher costs frames, and moving the game's own View Distance slider sets it again.", (500, 10000, 7000), 5000, Some(7000)),
             tweak("groundEffectDensity", "Grass and clutter", "How thick the grass and small plants are.", "48 is the game's usual. 256 is the most it takes, and that can cost frames in busy places. Moving the game's own Ground Clutter slider sets it again.", (16, 256, 48), 48, None),
+            tweak("groundEffectDist", "Grass distance", "How far out grass and small plants are drawn.", "The game's own Ground Clutter slider goes up to 200. 500 fills in hillsides further out, which costs some frames. Moving that slider sets it again.", (50, 500, 70), 200, None),
+            tweak("groundEffectFade", "Grass fade", "Where grass starts to thin out, so it fades away instead of ending in a line.", "70 is the game's usual, even with Ground Clutter at its highest. Keep it a little under Grass distance: 370 goes well with 500.", (50, 500, 70), 70, None),
             tweak("lodObjectCullSize", "Small objects", "Keeps small things like rocks and fences in view further out. Lower keeps more.", "Anything smaller than this stops being drawn once it's far away. Try 8 to keep most of it.", (0, 40, 18), 18, None),
             tweak("lodObjectFadeScale", "Detail distance", "How far away buildings and trees keep their full detail.", "100 is the game's usual. 200 keeps the detailed models twice as far out, which costs some frames.", (50, 300, 100), 100, None),
+            tweak("weatherDensity", "Weather", "How heavy rain and snow look.", "2 is the game's usual and 3 is the heaviest. 0 is the lightest, though weather never goes away completely.", (0, 3, 2), 2, None),
             tweak("ResampleAlwaysSharpen", "Sharpening", "Sharpens the picture all the time, not only when the game renders below full size.", "The game sharpens on its own when Render Scale is under 100%. This keeps it on at 100% too. It costs next to nothing.", (0, 1, 0), 0, None),
+            tweak("HDROutput", "HDR", "Turns on HDR for screens that have it, like OLED and mini-LED.", "Turn HDR on for the screen in your computer's display settings first. If the screen can't show HDR, the game stays as it was.", (0, 1, 0), 0, None),
+            tweak("HDRFactor", "HDR highlights", "How much brighter than normal the brightest spots can get with HDR on.", "200 is the game's usual, twice as bright as without HDR. Try 130 if it looks harsh. Your screen's own limit still caps it.", (100, 200, 200), 200, None),
         ],
     })
 }

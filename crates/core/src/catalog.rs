@@ -101,13 +101,13 @@ pub const CATALOG: &[Entry] = &[
     Entry {
         id: "tome",
         name: "Tome",
-        blurb: "One set of tabs beside the windows you open most, so each is a click from the others.",
+        blurb: "One row of tabs on top of the windows you open most, so each is a click from the others.",
         about: &[
             "Character, Professions, Spellbook, Talents, Guild, Collections, Group Finder and more share the same tabs.",
-            "The tabs stay put down the left, and each window opens beside them at its usual size.",
+            "The tabs stay put along the top, and each window opens under them at its usual size.",
             "A Bags tab puts every bag in one window, and your bag buttons open it in combat too.",
             "Works in combat. The tabs press the same buttons Blizzard's own menu bar does.",
-            "Drag a window, or the gear under the tabs, to move them. Set a key under Options, Keybindings to close what's open and bring back your last tab.",
+            "Drag a window, or the gear at the end of the tabs, to move them. Set a key under Options, Keybindings to close what's open and bring back your last tab.",
         ],
         repo: "tasyusef/tome",
         tag_prefix: None,

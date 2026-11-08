@@ -1,10 +1,10 @@
-//! The screens: the picks, addons added from GitHub, the other folders in AddOns, the game's
-//! graphics settings, and Gryphon's own settings. Each is a page head (a label, the title, one line, and where the game is) over its
+//! The screens: the picks, addons added from GitHub, CurseForge's search, the other folders in
+//! AddOns, the game's graphics settings, and Gryphon's own settings. Each is a page head (a label, the title, one line, and where the game is) over its
 //! rows.
 
 use std::collections::BTreeMap;
 
-use gryphon_shared::{Addon, Fit, Folder, Graphics, Step, Tweak};
+use gryphon_shared::{Addon, Fit, Folder, Found, Graphics, Search, Step, Tweak};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_json::json;
@@ -73,7 +73,9 @@ pub fn Github() -> impl IntoView {
     let kit = expect_context::<Kit>();
     let repo = RwSignal::new(String::new());
     let rows = move || {
-        let added: Vec<Addon> = kit.library.with(|l| l.as_ref().map(|l| l.addons.iter().filter(|a| !a.featured).cloned().collect()).unwrap_or_default());
+        let added: Vec<Addon> = kit.library.with(|l| {
+            l.as_ref().map(|l| l.addons.iter().filter(|a| !a.featured && a.source.curseforge.is_none()).cloned().collect()).unwrap_or_default()
+        });
         if added.is_empty() {
             return view! { <p class="lbl note dim empty-note">"Nothing added yet."</p> }.into_any();
         }
@@ -113,6 +115,234 @@ pub fn Github() -> impl IntoView {
     }
 }
 
+/// CurseForge: what was installed from it, then a search of the addons with a WoW Forever file.
+/// It opens on the most popular. Without the player's own key, it asks for one.
+#[component]
+pub fn Curse() -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let has_key = move || kit.settings.with(|s| s.has_curseforge_key);
+    view! {
+        <Head
+            kicker="Search"
+            title="CurseForge"
+            note="Addons on CurseForge with a WoW Forever build. They install and update like the rest, and nothing in AddOns changes until the download is checked.".to_string()
+            game=true
+        />
+        {move || {
+            if has_key() {
+                view! { <CurseSearch /> }.into_any()
+            } else {
+                view! {
+                    <section class="set">
+                        <h2 class="lbl dim">"Your CurseForge key"</h2>
+                        <p class="lbl note">
+                            "CurseForge only answers apps that send a key, and each player brings their own. It's free: sign in at "
+                            <span class="selectable">"console.curseforge.com"</span>
+                            ", open API keys, and paste yours here."
+                        </p>
+                        <CurseKey />
+                    </section>
+                }
+                .into_any()
+            }
+        }}
+    }
+}
+
+/// The installed CurseForge addons, the search box and its results.
+#[component]
+fn CurseSearch() -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let words = RwSignal::new(String::new());
+    let results = RwSignal::new(None::<Search>);
+    let searched = RwSignal::new(String::new());
+    let searching = RwSignal::new(false);
+
+    let search = move |wanted: String| {
+        if searching.get_untracked() {
+            return;
+        }
+        searching.set(true);
+        kit.say(if wanted.trim().is_empty() { "Loading CurseForge's most popular".to_string() } else { format!("Searching CurseForge for {}", wanted.trim()) }, Tone::Quiet);
+        spawn_local(async move {
+            match bridge::call::<Search>("search_curseforge", json!({ "words": wanted }), None).await {
+                Ok(found) => {
+                    let line = match found.results.len() {
+                        0 => "Nothing on CurseForge matches with a WoW Forever build.".to_string(),
+                        n => format!("{} with a WoW Forever build.", text::count(n, "addon", "addons")),
+                    };
+                    kit.say(line, Tone::Quiet);
+                    searched.set(wanted.trim().to_string());
+                    results.set(Some(found));
+                }
+                Err(e) => kit.say(e, Tone::Alert),
+            }
+            searching.set(false);
+        });
+    };
+    search(String::new());
+
+    let installed = move || {
+        let added: Vec<Addon> =
+            kit.library.with(|l| l.as_ref().map(|l| l.addons.iter().filter(|a| a.source.curseforge.is_some()).cloned().collect()).unwrap_or_default());
+        (!added.is_empty()).then(|| {
+            view! {
+                <h2 class="lbl dim list-label">"Installed from CurseForge"</h2>
+                <div class="addons">{added.into_iter().map(|addon| view! { <AddonRow addon /> }).collect_view()}</div>
+            }
+        })
+    };
+    let submit = move |ev: leptos::ev::SubmitEvent| {
+        ev.prevent_default();
+        search(words.get_untracked());
+    };
+    let heading = move || {
+        let wanted = searched.get();
+        if wanted.is_empty() { "Most popular".to_string() } else { format!("Matching {wanted}") }
+    };
+    let more = move || {
+        results.with(|r| {
+            let r = r.as_ref()?;
+            let total = r.total.filter(|t| *t > r.results.len() as u64)?;
+            Some(view! { <p class="lbl note dim empty-note">{format!("The first {} of {total}. More words narrow it down.", r.results.len())}</p> })
+        })
+    };
+    let rows = move || {
+        results.with(|r| match r {
+            None => ().into_any(),
+            Some(r) if r.results.is_empty() => view! { <p class="lbl note dim empty-note">"No addons with a WoW Forever build match."</p> }.into_any(),
+            Some(r) => r.results.iter().cloned().map(|found| view! { <FoundRow found /> }).collect_view().into_any(),
+        })
+    };
+
+    view! {
+        {installed}
+        <form class="add-row" on:submit=submit role="search">
+            <input
+                class="field body"
+                type="search"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder="Search CurseForge"
+                aria-label="Search CurseForge"
+                prop:value=move || words.get()
+                on:input=move |ev| words.set(event_target_value(&ev))
+            />
+            <button type="submit" class="btn lbl" disabled=move || searching.get()>
+                {move || if searching.get() { "Searching" } else { "Search" }}
+            </button>
+        </form>
+        <h2 class="lbl dim list-label">{heading}</h2>
+        <div class="addons">{rows}</div>
+        {more}
+    }
+}
+
+/// One search result: its name, what it does and who made it, how popular and how recent it
+/// is, and Install, or why it can't be.
+#[component]
+fn FoundRow(found: Found) -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let Found { id, slug, name, summary, authors, downloads, updated, distributable, installed_as, .. } = found;
+    let library_id = format!("curseforge:{id}");
+    let step = {
+        let library_id = library_id.clone();
+        Memo::new(move |_| kit.steps.with(|s| s.get(&library_id).cloned()))
+    };
+    let failure = {
+        let library_id = library_id.clone();
+        Memo::new(move |_| kit.failures.with(|f| f.get(&library_id).cloned()))
+    };
+    // installed since the search ran, or already when it did
+    let installed = {
+        let library_id = library_id.clone();
+        Memo::new(move |_| {
+            kit.library
+                .with(|l| l.as_ref()?.addons.iter().find(|a| a.id == library_id && a.installed.is_some()).map(|a| (a.id.clone(), a.name.clone())))
+                .or_else(|| installed_as.clone())
+        })
+    };
+    let by = (!authors.is_empty()).then(|| format!("By {}", authors.join(", ")));
+    let updated = updated.as_deref().map(text::date);
+    let page = slug.clone();
+    let title = name.clone();
+
+    let act = move || {
+        if let Some(step) = step.get() {
+            return view! { <Meter step /> }.into_any();
+        }
+        match installed.get() {
+            Some((other, shown)) => {
+                let line = if other == library_id { "Installed".to_string() } else { format!("Installed as {shown}") };
+                view! { <span class="lbl dim">{line}</span> }.into_any()
+            }
+            None if !distributable => view! {
+                <span class="lbl dim" title="Its author only lets CurseForge's own app download it.">"CurseForge app only"</span>
+            }
+            .into_any(),
+            None => {
+                let (slug, name) = (slug.clone(), name.clone());
+                view! {
+                    <button
+                        type="button"
+                        class="btn lbl"
+                        disabled=move || kit.busy.get() || !kit.has_game()
+                        on:click=move |_| kit.add_curse(id, slug.clone(), name.clone())
+                    >
+                        "Install"
+                    </button>
+                }
+                .into_any()
+            }
+        }
+    };
+
+    view! {
+        <article class="addon found reveal-scope">
+            <div class="what">
+                <h2 class="body">{title}</h2>
+                <p class="lbl note dim">{summary}</p>
+                {by.map(|line| view! { <p class="lbl note dim">{line}</p> })}
+                {move || failure.get().map(|message| view! { <p class="lbl note failed selectable">{message}</p> })}
+            </div>
+            <div class="facts">
+                <span class="lbl note nowrap">{format!("{} downloads", text::downloads(downloads))}</span>
+                {updated.map(|date| view! { <span class="lbl dim nowrap">{date}</span> })}
+            </div>
+            <div class="act">
+                {act}
+                <button type="button" class="btn lbl reveal-item" on:click=move |_| kit.open_curseforge(page.clone())>"Page"</button>
+            </div>
+        </article>
+    }
+}
+
+/// The box for the player's CurseForge key.
+#[component]
+fn CurseKey() -> impl IntoView {
+    let kit = expect_context::<Kit>();
+    let key = RwSignal::new(String::new());
+    let save = move |ev: leptos::ev::SubmitEvent| {
+        ev.prevent_default();
+        kit.set_curseforge_key(key.get_untracked());
+        key.set(String::new());
+    };
+    view! {
+        <form class="add-row" on:submit=save>
+            <input
+                class="field body"
+                type="password"
+                autocomplete="off"
+                placeholder="Your CurseForge API key"
+                aria-label="CurseForge API key"
+                prop:value=move || key.get()
+                on:input=move |ev| key.set(event_target_value(&ev))
+            />
+            <button type="submit" class="btn lbl" disabled=move || key.with(|k| k.trim().is_empty())>"Save"</button>
+        </form>
+    }
+}
+
 /// The size an addon downloads at: the last check's, else the catalog's guess.
 fn size_of(addon: &Addon) -> Option<u64> {
     addon.latest.as_ref().map(|l| l.size).or(addon.size_hint_mb.map(|mb| u64::from(mb) << 20))
@@ -127,11 +357,11 @@ struct Standing {
 
 fn standing(addon: &Addon) -> Standing {
     let update = addon.update_available();
-    let version = |tag: &str| text::version(tag, &addon.source);
+    let version = |tag: &str| text::shown_version(tag, &addon.source);
     let (now, then) = match (&addon.installed, &addon.latest) {
-        (Some(have), Some(latest)) if update => (format!("v{}", version(&have.tag)), Some(format!("New v{}", version(&latest.tag)))),
-        (Some(have), _) => (format!("v{}", version(&have.tag)), None),
-        (None, Some(latest)) => (format!("v{}", version(&latest.tag)), None),
+        (Some(have), Some(latest)) if update => (version(&have.tag), Some(format!("New {}", version(&latest.tag)))),
+        (Some(have), _) => (version(&have.tag), None),
+        (None, Some(latest)) => (version(&latest.tag), None),
         (None, None) => (String::new(), None),
     };
     let state = match (&addon.installed, &addon.latest) {
@@ -172,7 +402,7 @@ fn AddonRow(addon: Addon) -> impl IntoView {
     let Standing { now, then, state } = standing(&addon);
     let needs = needs_names(kit, &addon, true);
     let problem = addon.problem.clone();
-    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.repo.clone());
+    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.label());
     let name = addon.name.clone();
 
     view! {
@@ -286,15 +516,21 @@ fn AddonDetail(addon: Addon) -> impl IntoView {
         let id = addon.id.clone();
         Memo::new(move |_| kit.failures.with(|f| f.get(&id).cloned()))
     };
-    let back = if addon.featured { "Picks" } else { "From GitHub" };
+    let curse = addon.source.curseforge.clone();
+    let back = match (addon.featured, &curse) {
+        (true, _) => "Picks",
+        (false, Some(_)) => "CurseForge",
+        (false, None) => "From GitHub",
+    };
     let Standing { now, then, .. } = standing(&addon);
     let size = size_of(&addon).map(text::size);
     let released = addon.latest.as_ref().and_then(|l| l.published_at.as_deref()).map(text::date);
     let folders = addon.installed.as_ref().map(|i| i.folders.join(", ")).filter(|f| !f.is_empty());
     let needs = needs_names(kit, &addon, false);
     let problem = addon.problem.clone();
-    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.repo.clone());
+    let blurb = addon.blurb.clone().unwrap_or_else(|| addon.source.label());
     let repo = addon.source.repo.clone();
+    let source = addon.source.label();
     let about = addon.about.clone();
     let state = match (&addon.installed, addon.update_available()) {
         (Some(_), true) => "Installed, with an update waiting",
@@ -312,10 +548,16 @@ fn AddonDetail(addon: Addon) -> impl IntoView {
                 <h1 class="display">{addon.name.clone()}</h1>
                 <div class="head-actions">
                     <Actions addon=addon.clone() />
-                    <button type="button" class="btn lbl" on:click={
-                        let repo = repo.clone();
-                        move |_| kit.open_github(repo.clone())
-                    }>"Open on GitHub"</button>
+                    {match curse {
+                        Some(project) => view! {
+                            <button type="button" class="btn lbl" on:click=move |_| kit.open_curseforge(project.slug.clone())>"Open on CurseForge"</button>
+                        }
+                        .into_any(),
+                        None => view! {
+                            <button type="button" class="btn lbl" on:click=move |_| kit.open_github(repo.clone())>"Open on GitHub"</button>
+                        }
+                        .into_any(),
+                    }}
                 </div>
             </div>
             <p class="lbl note dim">{blurb}</p>
@@ -355,7 +597,7 @@ fn AddonDetail(addon: Addon) -> impl IntoView {
                     <dd class="lbl note selectable">{folders}</dd>
                 })}
                 <dt class="lbl dim">"Source"</dt>
-                <dd class="lbl note selectable">{repo}</dd>
+                <dd class="lbl note selectable">{source}</dd>
             </dl>
         </section>
     }
@@ -712,6 +954,26 @@ pub fn SettingsScreen() -> impl IntoView {
                         </form>
                     }
                     .into_any()
+                }
+            }}
+        </section>
+        <section class="set">
+            <SetHead
+                title="CurseForge key"
+                id="tip-curseforge"
+                tip="Lets Gryphon search and install from CurseForge. CurseForge only answers apps that send a key, and each player brings their own: it's free at console.curseforge.com, under API keys. It's saved in plain text in the app's settings."
+            />
+            {move || {
+                if kit.settings.with(|s| s.has_curseforge_key) {
+                    view! {
+                        <div class="set-actions">
+                            <span class="body">"Key saved"</span>
+                            <button type="button" class="btn lbl" on:click=move |_| kit.set_curseforge_key(String::new())>"Remove"</button>
+                        </div>
+                    }
+                    .into_any()
+                } else {
+                    view! { <CurseKey /> }.into_any()
                 }
             }}
         </section>

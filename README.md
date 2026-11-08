@@ -2,7 +2,7 @@
 
 # Gryphon
 
-Gryphon installs and updates addons for World of Warcraft: Forever. It pulls them straight from each addon's GitHub releases, so there's no CurseForge, no Overwolf, no account and no ads.
+Gryphon installs and updates addons for World of Warcraft: Forever. It pulls them straight from each addon's GitHub releases, or from CurseForge if you give it a key. There's no CurseForge app, no Overwolf, no account and no ads.
 
 I made it for me and a few friends ahead of Forever's launch. It's small on purpose. You pick an addon, it grabs the Forever build, and it keeps it up to date after that.
 
@@ -42,6 +42,7 @@ The deb installs with `sudo dpkg -i Gryphon_*.deb`.
 
 - It comes with a short list of addons I've checked have real Forever builds: OpenMap, Questie, DialogueUI and Spoken, plus Spoken's quest voices, and Tome, my own addon that puts tabs on the game's windows.
 - It can install other addons too. Paste the addon's GitHub repo, and as long as a release has a zip built for Forever, Gryphon installs it. Nothing in your AddOns folder changes until that's been checked.
+- It can search CurseForge, if you add your own CurseForge key. It only shows addons with a Forever build, and they install and update like everything else.
 - It checks for updates and installs them when you say so.
 - Before an update or a removal touches anything, the old copy of the folder goes to `Interface/.gryphon-backup`, so you can always get it back.
 - Addons you installed some other way are left alone. Gryphon just lists them and tells you whether Forever will load them.
@@ -52,6 +53,12 @@ It finds the game in the usual place on its own. If yours lives somewhere else, 
 ## GitHub limits
 
 Without signing in, GitHub allows 60 update checks an hour from your network. That's plenty for a handful of addons. If you ever run into it, make a GitHub token with no scopes and paste it into Settings. Heads up: it's saved in plain text in the app's settings file.
+
+## CurseForge
+
+CurseForge only answers apps that send an API key, and each person brings their own. It's free: sign in at [console.curseforge.com](https://console.curseforge.com), open **API keys**, and paste yours into the CurseForge screen or Settings. Like the GitHub token, it's saved in plain text in the app's settings file.
+
+Some authors only let CurseForge's own app download their addons. Gryphon marks those as "CurseForge app only" instead of trying.
 
 ## Running it yourself
 
@@ -83,11 +90,11 @@ The same engine works without the window:
 cargo run -p gryphon-cli -- help
 ```
 
-`status` shows the game and what's installed, `list` shows the built-in picks, `check` looks for updates, and `install`, `update` and `remove` do what they say, and `graphics` shows or changes the graphics settings. `install` takes a pick's name (like `openmap`) or any GitHub repo. Set `GITHUB_TOKEN` if you want the higher limit here too.
+`status` shows the game and what's installed, `list` shows the built-in picks, `search` looks on CurseForge, `check` looks for updates, `install`, `update` and `remove` do what they say, and `graphics` shows or changes the graphics settings. `install` takes a pick's name (like `openmap`), any GitHub repo, or a CurseForge project as `search` lists it (like `curseforge:13592`). Set `GITHUB_TOKEN` if you want the higher limit here too, and `CURSEFORGE_API_KEY` for anything on CurseForge.
 
 ## How it's laid out
 
-- `crates/core` does the real work: finding the game, reading `.toc` files, talking to GitHub and installing.
+- `crates/core` does the real work: finding the game, reading `.toc` files, talking to GitHub and CurseForge, and installing.
 - `crates/app` is the desktop window, built with Tauri.
 - `crates/ui` is the page inside that window, written in Leptos and built with Trunk.
 - `crates/cli` is the terminal version.

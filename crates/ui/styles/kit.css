@@ -123,6 +123,8 @@
 /* --- adding from GitHub, and the token: a field and its button on one line --- */
 .add-row{display:flex;align-items:flex-end;gap:var(--s2);max-width:720px;padding-bottom:var(--s2)}
 .add-row .field{flex:1;min-width:0}
+.list-label{padding:var(--s2) 0 var(--s1)}
+.addon .act>.lbl:not(.btn){padding-top:4px;text-align:right}   /* a word in place of the button, on the name's line */
 
 /* --- the other folders: the name, whether Forever loads it, its interface numbers --- */
 /* one grid for the list, each row on it (subgrid), so the columns line up and fit their longest

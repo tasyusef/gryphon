@@ -20,6 +20,8 @@
   --ochre-lit:#d9b45a;
   --verdigris:#2e6a4c;
   --verdigris-lit:#62bd8f;
+  --tyrian:#7a2f6b;         /* 6.8:1 on vellum */
+  --tyrian-lit:#d48cc4;     /* 7.4:1 on night */
   --blood:#8e1b12;          /* errors on vellum, 7.2:1 */
   --blood-lit:#ff6b57;      /* errors on night, 6.6:1 */
 
@@ -32,6 +34,7 @@
   --accent-2:var(--lapis-lit);   /* what is new; the GitHub list */
   --accent-3:var(--ochre-lit);   /* the other folders */
   --accent-4:var(--verdigris-lit); /* the game's own settings */
+  --accent-5:var(--tyrian-lit);  /* the CurseForge list */
   --alert:var(--blood-lit);
   --rule:color-mix(in srgb,var(--fg) 40%,var(--paper));
 }
@@ -46,6 +49,7 @@
   --accent-2:var(--lapis);
   --accent-3:var(--ochre);
   --accent-4:var(--verdigris);
+  --accent-5:var(--tyrian);
   --alert:var(--blood);
   --dim:.66;
 }
@@ -61,6 +65,7 @@
 .side-mark.tint-github{background:var(--accent-2)}
 .side-mark.tint-folders{background:var(--accent-3)}
 .side-mark.tint-graphics{background:var(--accent-4)}
+.side-mark.tint-curse{background:var(--accent-5)}
 .side-row[aria-current],:root[data-theme=light] .side-row[aria-current]{background:none;color:var(--accent-text);box-shadow:inset 4px 0 0 var(--accent)}
 
 /* --- page heads: the kicker in red, a double rule under the head --- */

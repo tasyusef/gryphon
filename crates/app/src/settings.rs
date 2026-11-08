@@ -15,6 +15,10 @@ pub struct Settings {
     /// Raises GitHub's hourly limit. Kept in plain text: it only needs to read public repos.
     #[serde(default)]
     pub github_token: Option<String>,
+    /// The player's own CurseForge API key, for searching and installing from CurseForge. Kept in
+    /// plain text like the token.
+    #[serde(default)]
+    pub curseforge_key: Option<String>,
     #[serde(default)]
     pub light: bool,
 }
@@ -43,6 +47,7 @@ impl Settings {
         SettingsInfo {
             wow_path: self.wow_path.as_ref().map(|p| p.display().to_string()),
             has_token: self.github_token.is_some(),
+            has_curseforge_key: self.curseforge_key.is_some(),
             light: self.light,
         }
     }

@@ -10,7 +10,7 @@ use gryphon_core::wow::Game;
 use gryphon_core::graphics::{self, Change};
 use gryphon_core::{catalog, install, library};
 
-const HELP: &str = "gryphon: WoW Forever addons from GitHub
+const HELP: &str = "gryphon: WoW Forever addons from GitHub and CurseForge
 
 usage: gryphon [--wow <folder>] <command>
 
@@ -18,7 +18,9 @@ commands:
   status               the game, and what is installed
   list                 the built-in picks
   check                look for updates
-  install <addon>...   a pick's id (openmap) or a GitHub repo (owner/name or URL)
+  install <addon>...   a pick's id (openmap), a GitHub repo (owner/name or URL),
+                       or a CurseForge project (curseforge:<number>, from search)
+  search [words]       CurseForge addons with a Forever build (needs CURSEFORGE_API_KEY)
   update               update everything that has an update
   remove <id>...       take addons out (their folders go to the backup)
   pack [name]          print what is installed as a list to share
@@ -26,7 +28,8 @@ commands:
   graphics <setting> <value|back>
                        change one (the game must be closed), or put it back
 
---wow takes the World of Warcraft folder or anything inside it. GITHUB_TOKEN is used when set.";
+--wow takes the World of Warcraft folder or anything inside it. GITHUB_TOKEN is used when set,
+and CURSEFORGE_API_KEY (your own, free at console.curseforge.com) for anything on CurseForge.";
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -61,11 +64,14 @@ async fn run(mut args: Vec<String>) -> Result<(), String> {
         return Ok(());
     }
 
+    let client = Client::new(std::env::var("GITHUB_TOKEN").ok()).map_err(|e| e.to_string())?.with_curseforge(std::env::var("CURSEFORGE_API_KEY").ok());
+    if command == "search" {
+        return search(&client, &rest.join(" ")).await;
+    }
     let game = match &wow {
         Some(path) => Game::open(path).ok_or_else(|| format!("no WoW Forever install at {}", path.display()))?,
         None => Game::find().ok_or("WoW Forever was not found in the usual places; pass --wow <folder>")?,
     };
-    let client = Client::new(std::env::var("GITHUB_TOKEN").ok()).map_err(|e| e.to_string())?;
 
     match command.as_str() {
         "status" => status(&game),
@@ -75,7 +81,10 @@ async fn run(mut args: Vec<String>) -> Result<(), String> {
                 return Err("install what? try `gryphon list`".into());
             }
             for want in rest {
-                let (id, name, source) = resolve(want)?;
+                let (id, name, source) = match want.strip_prefix("curseforge:") {
+                    Some(number) => resolve_curse(&client, number).await?,
+                    None => resolve(want)?,
+                };
                 for need in catalog::find(&id).map(|e| e.needs).unwrap_or_default() {
                     if !State::load(&game).map_err(|e| e.to_string())?.addons.contains_key(*need) {
                         let entry = catalog::find(need).expect("catalog needs name catalog ids");
@@ -147,6 +156,28 @@ fn resolve(want: &str) -> Result<(String, String, Source), String> {
     Ok((library::id_for(&source), name, source))
 }
 
+const NO_KEY: &str = "CurseForge needs your own API key: set CURSEFORGE_API_KEY (free at console.curseforge.com)";
+
+/// A CurseForge project by its number, as `search` lists it.
+async fn resolve_curse(client: &Client, number: &str) -> Result<(String, String, Source), String> {
+    let number: u64 = number.parse().map_err(|_| format!("curseforge:{number} needs the project's number, as `gryphon search` shows it"))?;
+    let found = client.curseforge().map_err(|_| NO_KEY)?.project(number).await.map_err(|e| e.to_string())?;
+    let source = Source::curseforge(found.id, &found.slug);
+    Ok((library::id_for(&source), found.name, source))
+}
+
+async fn search(client: &Client, words: &str) -> Result<(), String> {
+    let found = client.curseforge().map_err(|_| NO_KEY)?.search(words).await.map_err(|e| e.to_string())?;
+    for addon in &found.results {
+        let note = if addon.distributable { "" } else { "  (CurseForge app only)" };
+        println!("curseforge:{:<10} {:<32} {:>12} downloads{note}", addon.id, addon.name, addon.downloads);
+    }
+    if let Some(total) = found.total.filter(|t| *t > found.results.len() as u64) {
+        println!("\nthe first {} of {total}; more words narrow it down", found.results.len());
+    }
+    Ok(())
+}
+
 async fn install_one(client: &Client, game: &Game, id: &str, name: &str, source: &Source) -> Result<(), String> {
     let mut on_step = progress(name);
     let installed = install::install(client, game, id, name, source, &mut on_step).await.map_err(|e| e.to_string())?;
@@ -157,7 +188,7 @@ async fn install_one(client: &Client, game: &Game, id: &str, name: &str, source:
 fn progress(name: &str) -> impl FnMut(Step) + Send + use<> {
     let name = name.to_string();
     move |step| match step {
-        Step::Checking => eprintln!("{name}: checking GitHub"),
+        Step::Checking => eprintln!("{name}: finding the newest Forever build"),
         Step::Downloading { done, total: Some(total) } if done == total || done == 0 => {
             eprintln!("{name}: downloading {} / {} MB", done >> 20, total >> 20)
         }

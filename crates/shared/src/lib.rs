@@ -3,10 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Where an addon comes from: a GitHub repo, and which of its releases and files are the addon.
+/// Where an addon comes from: a GitHub repo, and which of its releases and files are the addon,
+/// or a CurseForge project.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Source {
-    /// `owner/name`.
+    /// `owner/name` on GitHub. Empty for a CurseForge project.
+    #[serde(default)]
     pub repo: String,
     /// Only releases whose tag starts with this. One repo can ship several addons this way
     /// (Spoken: `spoken/v3.6.0`, `quests-audio/v2.4.0`).
@@ -15,11 +17,33 @@ pub struct Source {
     /// Only zip files whose name contains this, when a release has more than one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub asset: Option<String>,
+    /// A CurseForge project rather than a GitHub repo.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curseforge: Option<CurseProject>,
+}
+
+/// A project on CurseForge: its number, which never changes, and the slug in its page's address.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CurseProject {
+    pub id: u64,
+    pub slug: String,
 }
 
 impl Source {
     pub fn github(repo: &str) -> Source {
-        Source { repo: repo.to_string(), tag_prefix: None, asset: None }
+        Source { repo: repo.to_string(), tag_prefix: None, asset: None, curseforge: None }
+    }
+
+    pub fn curseforge(id: u64, slug: &str) -> Source {
+        Source { repo: String::new(), tag_prefix: None, asset: None, curseforge: Some(CurseProject { id, slug: slug.to_string() }) }
+    }
+
+    /// Where it comes from, in a few words: `owner/name`, or `curseforge.com/wow/addons/slug`.
+    pub fn label(&self) -> String {
+        match &self.curseforge {
+            Some(project) => format!("curseforge.com/wow/addons/{}", project.slug),
+            None => self.repo.clone(),
+        }
     }
 
     /// Reads `owner/name`, `gh:owner/name`, `github:owner/name` or any github.com URL into
@@ -38,8 +62,22 @@ impl Source {
     }
 
     pub fn url(&self) -> String {
-        format!("https://github.com/{}", self.repo)
+        match &self.curseforge {
+            Some(project) => curseforge_url(&project.slug),
+            None => format!("https://github.com/{}", self.repo),
+        }
     }
+}
+
+/// A CurseForge project's page.
+pub fn curseforge_url(slug: &str) -> String {
+    format!("https://www.curseforge.com/wow/addons/{slug}")
+}
+
+/// A slug as CurseForge makes them: lowercase letters, digits and dashes. Anything else is
+/// refused before it goes into an address.
+pub fn is_slug(slug: &str) -> bool {
+    !slug.is_empty() && slug.len() <= 128 && slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
 }
 
 /// Whether an addon folder loads on WoW Forever, read from the TOC the game would use.
@@ -172,13 +210,46 @@ impl AppProgress {
     }
 }
 
-/// The app's settings as the UI sees them. The token itself never goes back to the page.
+/// The app's settings as the UI sees them. The token and key never go back to the page.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SettingsInfo {
     /// The game folder picked by hand; `None` finds it in the usual places.
     pub wow_path: Option<String>,
     pub has_token: bool,
+    /// A CurseForge API key is saved, so CurseForge can be searched.
+    #[serde(default)]
+    pub has_curseforge_key: bool,
     pub light: bool,
+}
+
+/// One addon from a CurseForge search.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Found {
+    pub id: u64,
+    pub slug: String,
+    pub name: String,
+    pub summary: String,
+    pub authors: Vec<String>,
+    pub downloads: u64,
+    /// The newest file's date, `2026-11-02T18:00:00Z`.
+    pub updated: Option<String>,
+    /// It has a file built for WoW Forever.
+    pub forever: bool,
+    /// The author lets apps other than CurseForge's own download it.
+    pub distributable: bool,
+    /// The folders its newest Forever file puts in AddOns, as CurseForge lists them.
+    pub folders: Vec<String>,
+    /// The addon in the library it already is: installed from CurseForge, or one whose folders
+    /// it would replace. Its id and name.
+    pub installed_as: Option<(String, String)>,
+}
+
+/// A page of CurseForge search results.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Search {
+    pub results: Vec<Found>,
+    /// How many CurseForge says match, when it says.
+    pub total: Option<u64>,
 }
 
 /// One of the game's own settings (a CVar) Gryphon can change, and where it stands.

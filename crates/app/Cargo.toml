@@ -1,6 +1,6 @@
 [package]
 name = "gryphon-app"
-description = "Gryphon: WoW Forever addons from GitHub, in a window."
+description = "Gryphon: WoW Forever addons from GitHub and CurseForge, in a window."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-add-curseforge"
+description = "Enables the add_curseforge command without any pre-configured scope."
+commands.allow = ["add_curseforge"]
+
+[[permission]]
+identifier = "deny-add-curseforge"
+description = "Denies the add_curseforge command without any pre-configured scope."
+commands.deny = ["add_curseforge"]

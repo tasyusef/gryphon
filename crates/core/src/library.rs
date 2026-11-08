@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use gryphon_shared::{Addon, InstalledInfo, LatestInfo, Library, Pack, PackAddon, Source};
+use gryphon_shared::{Addon, InstalledInfo, LatestInfo, Library, Pack, PackAddon, Search, Source};
 
 use crate::catalog::{self, CATALOG};
 use crate::error::Result;
@@ -14,8 +14,12 @@ use crate::wow::Game;
 /// The last check of each addon: its newest Forever release, or why it could not be found.
 pub type Checks = BTreeMap<String, std::result::Result<LatestInfo, String>>;
 
-/// The id an addon added from GitHub gets: its repo, lowercased, plus any tag prefix.
+/// The id an addon added from GitHub gets: its repo, lowercased, plus any tag prefix. One from
+/// CurseForge gets its project number, which stays put when the project is renamed.
 pub fn id_for(source: &Source) -> String {
+    if let Some(project) = &source.curseforge {
+        return format!("curseforge:{}", project.id);
+    }
     let repo = source.repo.to_ascii_lowercase();
     match &source.tag_prefix {
         Some(prefix) => format!("{repo}#{}", prefix.trim_end_matches(['/', 'v'])),
@@ -102,6 +106,19 @@ pub async fn check(client: &Client, sources: Vec<(String, Source)>) -> BTreeMap<
     results
 }
 
+/// Marks each search result already in the library: installed from CurseForge, or shipping a
+/// folder an addon installed here already has, so installing it would replace that addon.
+pub fn mark_installed(search: &mut Search, game: Option<&Game>) -> Result<()> {
+    let Some(game) = game else { return Ok(()) };
+    let state = State::load(game)?;
+    let named = |id: &str| state.addons.get(id).map(|a| (id.to_string(), a.name.clone()));
+    for found in &mut search.results {
+        let id = id_for(&Source::curseforge(found.id, &found.slug));
+        found.installed_as = named(&id).or_else(|| found.folders.iter().find_map(|f| state.owner_of(f)).and_then(named));
+    }
+    Ok(())
+}
+
 pub fn latest_info(latest: &Latest) -> LatestInfo {
     LatestInfo { tag: latest.tag.clone(), published_at: latest.published_at.clone(), size: latest.asset.size }
 }
@@ -122,8 +139,9 @@ mod tests {
     #[test]
     fn ids_for_github_addons() {
         assert_eq!(id_for(&Source::github("Questie/Questie")), "questie/questie");
-        let spoken = Source { repo: "rusty-key/spoken-wow".into(), tag_prefix: Some("quests-audio/v".into()), asset: None };
+        let spoken = Source { tag_prefix: Some("quests-audio/v".into()), ..Source::github("rusty-key/spoken-wow") };
         assert_eq!(id_for(&spoken), "rusty-key/spoken-wow#quests-audio");
+        assert_eq!(id_for(&Source::curseforge(13592, "masque")), "curseforge:13592");
     }
 
     #[test]

@@ -1,7 +1,9 @@
-//! Gryphon's engine: find WoW Forever, read addon TOCs, look up GitHub releases, and install
-//! them into `Interface/AddOns` without ever leaving a half-installed addon behind.
+//! Gryphon's engine: find WoW Forever, read addon TOCs, look up GitHub releases and CurseForge
+//! files, and install them into `Interface/AddOns` without ever leaving a half-installed addon
+//! behind.
 
 pub mod catalog;
+pub mod curseforge;
 mod error;
 pub mod github;
 pub mod graphics;

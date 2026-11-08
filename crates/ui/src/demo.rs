@@ -6,7 +6,8 @@ use serde_json::{Value, json};
 pub fn answer(command: &str) -> Result<Value, String> {
     match command {
         "library" | "check_updates" => Ok(library()),
-        "settings" => Ok(json!({ "wow_path": null, "has_token": false, "light": false })),
+        "settings" => Ok(json!({ "wow_path": null, "has_token": false, "has_curseforge_key": true, "light": false })),
+        "search_curseforge" => Ok(search()),
         // The preview is always the newest version.
         "check_app_update" => Ok(Value::Null),
         "graphics" => Ok(graphics()),
@@ -74,6 +75,13 @@ fn library() -> Value {
         "problem": "leatrix/leatrix-plus has no release with a WoW Forever zip.",
     });
     leatrix["installed"]["folders"] = json!(["Leatrix_Plus"]);
+    let masque = json!({
+        "id": "curseforge:13592", "name": "Masque", "blurb": null,
+        "source": { "repo": "", "curseforge": { "id": 13592, "slug": "masque" } }, "featured": false, "needs": [], "size_hint_mb": null,
+        "installed": { "tag": "11.2.9#7373575", "folders": ["Masque"], "installed_at": 1_793_000_000u64 },
+        "latest": { "tag": "11.2.10#7398127", "published_at": "2026-11-05T22:45:13Z", "size": 3_025_503u64 },
+        "problem": null,
+    });
 
     json!({
         "game": {
@@ -82,11 +90,36 @@ fn library() -> Value {
             "version": "1.60.1.70707",
             "interface": 16001,
         },
-        "addons": [openmap, questie, dialogue, spoken, voices, tome, leatrix],
+        "addons": [openmap, questie, dialogue, spoken, voices, tome, leatrix, masque],
         "other": [
             { "name": "WeakAuras", "title": "WeakAuras", "version": "5.19.2", "interface": [11507, 50500], "fit": "other_client" },
             { "name": "Details", "title": "Details! Damage Meter", "version": "#Details.20260901", "interface": [16001], "fit": "forever" },
             { "name": "MyNotes", "title": null, "version": null, "interface": [], "fit": "no_toc" },
         ],
+    })
+}
+
+/// A made-up CurseForge search: one installed, one kept to CurseForge's app, the rest to install.
+fn search() -> Value {
+    let found = |id: u64, slug: &str, name: &str, summary: &str, author: &str, downloads: u64, updated: &str| {
+        json!({
+            "id": id, "slug": slug, "name": name, "summary": summary, "authors": [author],
+            "downloads": downloads, "updated": updated, "forever": true, "distributable": true,
+            "folders": [], "installed_as": null,
+        })
+    };
+    let mut masque = found(13592, "masque", "Masque", "A skinning engine for button-based add-ons.", "StormFX", 8_916_674, "2026-11-05T22:45:13Z");
+    masque["installed_as"] = json!(["curseforge:13592", "Masque"]);
+    let mut bagnon = found(1592, "bagnon", "Bagnon", "Single-window displays for your bags and bank.", "Jaliborc", 52_310_442, "2026-11-04T09:12:00Z");
+    bagnon["distributable"] = json!(false);
+    json!({
+        "results": [
+            found(3358, "deadly-boss-mods", "Deadly Boss Mods", "Timers, warnings and voice alerts for every boss fight.", "MysticalOS", 512_004_118, "2026-11-06T18:02:00Z"),
+            found(2382, "details", "Details! Damage Meter", "Damage, healing and threat meters with a lot of ways to slice them.", "Terciob", 286_400_190, "2026-11-05T11:40:00Z"),
+            masque,
+            bagnon,
+            found(61284, "leatrix-maps", "Leatrix Maps", "Unexplored areas, coordinates and a bigger world map.", "Leatrix", 9_812_330, "2026-11-03T07:30:00Z"),
+        ],
+        "total": 214,
     })
 }

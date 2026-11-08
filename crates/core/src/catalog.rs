@@ -17,7 +17,7 @@ pub struct Entry {
 
 impl Entry {
     pub fn source(&self) -> Source {
-        Source { repo: self.repo.to_string(), tag_prefix: self.tag_prefix.map(String::from), asset: None }
+        Source { tag_prefix: self.tag_prefix.map(String::from), ..Source::github(self.repo) }
     }
 }
 

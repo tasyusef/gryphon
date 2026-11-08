@@ -18,6 +18,7 @@ use crate::{bridge, marks, screens, text};
 pub enum Screen {
     Picks,
     Github,
+    Curse,
     Folders,
     Graphics,
     Settings,
@@ -28,6 +29,7 @@ impl Screen {
         match self {
             Screen::Picks => "Picks",
             Screen::Github => "GitHub",
+            Screen::Curse => "CurseForge",
             Screen::Folders => "Folders",
             Screen::Graphics => "Graphics",
             Screen::Settings => "Settings",
@@ -60,6 +62,8 @@ pub struct Kit {
     pub steps: RwSignal<BTreeMap<String, Step>>,
     /// Each addon's last failure, until it is tried again.
     pub failures: RwSignal<BTreeMap<String, String>>,
+    /// Names for addons being added that the library doesn't list yet, by id.
+    adding: RwSignal<BTreeMap<String, String>>,
     /// The bottom bar's line.
     pub status: RwSignal<(String, Tone)>,
     /// The bottom bar's meter, 0 to 1, while a download runs.
@@ -87,6 +91,7 @@ impl Kit {
             checking: RwSignal::new(false),
             steps: RwSignal::new(BTreeMap::new()),
             failures: RwSignal::new(BTreeMap::new()),
+            adding: RwSignal::new(BTreeMap::new()),
             status: RwSignal::new((String::new(), Tone::Quiet)),
             meter: RwSignal::new(None),
             updates: Updates::new(),
@@ -125,6 +130,7 @@ impl Kit {
     fn name_of(&self, id: &str) -> String {
         self.library
             .with_untracked(|l| l.as_ref().and_then(|l| l.addons.iter().find(|a| a.id == id)).map(|a| a.name.clone()))
+            .or_else(|| self.adding.with_untracked(|a| a.get(id).cloned()))
             .unwrap_or_else(|| id.to_string())
     }
 
@@ -132,7 +138,7 @@ impl Kit {
         self.status.set((line.into(), tone));
     }
 
-    /// The library and settings, then a check of GitHub.
+    /// The library and settings, then a check for new releases.
     fn load(self) {
         spawn_local(async move {
             if let Ok(settings) = bridge::call::<SettingsInfo>("settings", json!({}), None).await {
@@ -152,7 +158,7 @@ impl Kit {
         }
         self.busy.set(true);
         self.checking.set(true);
-        self.say("Checking GitHub for new releases", Tone::Quiet);
+        self.say("Checking for new releases", Tone::Quiet);
         spawn_local(async move {
             match bridge::call::<Library>("check_updates", json!({}), None).await {
                 Ok(library) => {
@@ -267,6 +273,16 @@ impl Kit {
         });
     }
 
+    /// Installs a CurseForge project found by a search.
+    pub fn add_curse(self, id: u64, slug: String, name: String) {
+        self.adding.update(|a| {
+            a.insert(format!("curseforge:{id}"), name.clone());
+        });
+        self.run("add_curseforge", json!({ "id": id, "slug": slug, "name": name.clone() }), true, move |_, _| {
+            format!("{name} installed. It loads next time you log in.")
+        });
+    }
+
     pub fn update_all(self) {
         self.run("update_all", json!({}), true, |_, done| match done {
             0 => "Nothing needed updating.".to_string(),
@@ -320,10 +336,31 @@ impl Kit {
         });
     }
 
+    pub fn open_curseforge(self, slug: String) {
+        spawn_local(async move {
+            if let Err(e) = bridge::call::<()>("open_curseforge", json!({ "slug": slug }), None).await {
+                self.say(e, Tone::Alert);
+            }
+        });
+    }
+
     pub fn set_light(self, light: bool) {
         self.settings.update(|s| s.light = light);
         spawn_local(async move {
             let _ = bridge::call::<SettingsInfo>("set_light", json!({ "light": light }), None).await;
+        });
+    }
+
+    pub fn set_curseforge_key(self, key: String) {
+        let saving = !key.trim().is_empty();
+        spawn_local(async move {
+            match bridge::call::<SettingsInfo>("set_curseforge_key", json!({ "key": key }), None).await {
+                Ok(settings) => {
+                    self.settings.set(settings);
+                    self.say(if saving { "CurseForge key saved." } else { "CurseForge key removed." }, Tone::Done);
+                }
+                Err(e) => self.say(e, Tone::Alert),
+            }
         });
     }
 
@@ -412,9 +449,10 @@ pub fn App() -> impl IntoView {
                 <main class="app-main">
                     <div class="scroll pad screen-body">
                         {move || match (kit.screen.get(), kit.detail.get()) {
-                            (Screen::Picks | Screen::Github, Some(id)) => view! { <screens::AddonPage id /> }.into_any(),
+                            (Screen::Picks | Screen::Github | Screen::Curse, Some(id)) => view! { <screens::AddonPage id /> }.into_any(),
                             (Screen::Picks, None) => view! { <screens::Picks /> }.into_any(),
                             (Screen::Github, None) => view! { <screens::Github /> }.into_any(),
+                            (Screen::Curse, None) => view! { <screens::Curse /> }.into_any(),
                             (Screen::Folders, _) => view! { <screens::Folders /> }.into_any(),
                             (Screen::Graphics, _) => view! { <screens::GraphicsScreen /> }.into_any(),
                             (Screen::Settings, _) => view! { <screens::SettingsScreen /> }.into_any(),
@@ -437,7 +475,7 @@ fn Sidebar() -> impl IntoView {
             let picks: Vec<_> = l.addons.iter().filter(|a| a.featured).collect();
             let installed = picks.iter().filter(|a| a.installed.is_some()).count();
             let picks = format!("{installed}/{}", picks.len());
-            let github = l.addons.iter().filter(|a| !a.featured).count();
+            let github = l.addons.iter().filter(|a| !a.featured && a.source.curseforge.is_none()).count();
             (picks, github.to_string(), l.other.len().to_string())
         })
     });
@@ -466,6 +504,8 @@ fn Sidebar() -> impl IntoView {
                     <div class="side-label dim">"Addons"</div>
                     {row(Screen::Picks, Signal::derive(move || counts.get().0))}
                     {row(Screen::Github, Signal::derive(move || counts.get().1))}
+                    // no count: "CurseForge" fills the row's width on its own
+                    {row(Screen::Curse, Signal::derive(String::new))}
                     {row(Screen::Folders, Signal::derive(move || counts.get().2))}
                 </section>
                 " "

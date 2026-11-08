@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use gryphon_core::github::{Client, Latest};
 use gryphon_core::graphics::{self, Change};
-use gryphon_core::shared::{Graphics, Library, Progress, SettingsInfo, Source, Step};
+use gryphon_core::shared::{Graphics, Library, Progress, Search, SettingsInfo, Source, Step, curseforge_url, is_slug};
 use gryphon_core::state::State as Record;
 use gryphon_core::wow::Game;
 use gryphon_core::{catalog, install, library};
@@ -55,8 +55,13 @@ impl Kit {
     }
 
     fn client(&self) -> Answer<Client> {
-        let token = self.settings.lock().unwrap().github_token.clone().or_else(|| std::env::var("GITHUB_TOKEN").ok());
-        Client::new(token).map_err(|e| e.to_string())
+        let (token, key) = {
+            let settings = self.settings.lock().unwrap();
+            (settings.github_token.clone(), settings.curseforge_key.clone())
+        };
+        let token = token.or_else(|| std::env::var("GITHUB_TOKEN").ok());
+        let key = key.or_else(|| std::env::var("CURSEFORGE_API_KEY").ok());
+        Client::new(token).map(|c| c.with_curseforge(key)).map_err(|e| e.to_string())
     }
 
     fn library(&self) -> Answer<Library> {
@@ -117,7 +122,7 @@ impl Kit {
         outcome
     }
 
-    /// A pick, or an addon added from GitHub earlier.
+    /// A pick, or an addon added from GitHub or CurseForge earlier.
     fn find(&self, game: &Game, id: &str) -> Answer<(String, Source)> {
         if let Some(entry) = catalog::find(id) {
             return Ok((entry.name.to_string(), entry.source()));
@@ -185,6 +190,31 @@ pub async fn add_github(kit: State<'_, Kit>, repo: String, on_progress: Channel<
             kit.install_one(&client, &game, &library::id_for(&source), &name, &source, &on_progress).await
         }
     };
+    kit.library()
+}
+
+/// Searches CurseForge for addons with a WoW Forever file. Empty words list the most popular.
+#[tauri::command]
+pub async fn search_curseforge(kit: State<'_, Kit>, words: String) -> Answer<Search> {
+    let client = kit.client()?;
+    let mut search = client.curseforge().map_err(|e| e.to_string())?.search(&words).await.map_err(|e| e.to_string())?;
+    library::mark_installed(&mut search, kit.game().as_ref()).map_err(|e| e.to_string())?;
+    Ok(search)
+}
+
+/// Installs a CurseForge project's newest WoW Forever file. `name` is what the search showed.
+#[tauri::command]
+pub async fn add_curseforge(kit: State<'_, Kit>, id: u64, slug: String, name: String, on_progress: Channel<Progress>) -> Answer<Library> {
+    if !is_slug(&slug) {
+        return Err(format!("{slug} is not a CurseForge project."));
+    }
+    let name: String = name.trim().chars().take(100).collect();
+    let name = if name.is_empty() { slug.clone() } else { name };
+    let source = Source::curseforge(id, &slug);
+    let _work = kit.work.lock().await;
+    let game = kit.game().ok_or(NO_GAME)?;
+    let client = kit.client()?;
+    let _ = kit.install_one(&client, &game, &library::id_for(&source), &name, &source, &on_progress).await;
     kit.library()
 }
 
@@ -266,6 +296,15 @@ pub fn open_github(repo: String) -> Answer<()> {
     reveal(Path::new(&source.url()))
 }
 
+/// Opens a CurseForge project's page in the browser. Only a slug goes in, never a whole address.
+#[tauri::command]
+pub fn open_curseforge(slug: String) -> Answer<()> {
+    if !is_slug(&slug) {
+        return Err(format!("{slug} is not a CurseForge project."));
+    }
+    reveal(Path::new(&curseforge_url(&slug)))
+}
+
 fn reveal(path: &Path) -> Answer<()> {
     #[cfg(target_os = "macos")]
     let opener = "open";
@@ -306,4 +345,11 @@ pub fn set_light(app: AppHandle, kit: State<'_, Kit>, light: bool) -> Answer<Set
 pub fn set_token(app: AppHandle, kit: State<'_, Kit>, token: String) -> Answer<SettingsInfo> {
     let token = token.trim().to_string();
     kit.update_settings(&app, |s| s.github_token = (!token.is_empty()).then_some(token))
+}
+
+/// Saves a CurseForge API key; an empty one removes it.
+#[tauri::command]
+pub fn set_curseforge_key(app: AppHandle, kit: State<'_, Kit>, key: String) -> Answer<SettingsInfo> {
+    let key = key.trim().to_string();
+    kit.update_settings(&app, |s| s.curseforge_key = (!key.is_empty()).then_some(key))
 }

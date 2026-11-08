@@ -1,5 +1,6 @@
-//! GitHub Releases: the only network source. Public repos need no key; a token only raises
-//! the hourly limit (60 requests an hour without one, one request per addon per check).
+//! GitHub Releases, where most addons come from. Public repos need no key; a token only raises
+//! the hourly limit (60 requests an hour without one, one request per addon per check). The
+//! client hands CurseForge projects to [`crate::curseforge`] when a key for it is set.
 
 use std::path::Path;
 
@@ -8,6 +9,7 @@ use reqwest::{StatusCode, header};
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 
+use crate::curseforge::Curse;
 use crate::error::{Result, msg};
 use crate::wow::FOREVER_INTERFACES;
 
@@ -103,6 +105,7 @@ fn names_other_client(name: &str) -> bool {
 pub struct Client {
     http: reqwest::Client,
     token: Option<String>,
+    curse: Option<Curse>,
 }
 
 impl Client {
@@ -110,7 +113,18 @@ impl Client {
         let http = reqwest::Client::builder()
             .user_agent(concat!("Gryphon/", env!("CARGO_PKG_VERSION"), " (WoW addon manager)"))
             .build()?;
-        Ok(Client { http, token: token.filter(|t| !t.trim().is_empty()) })
+        Ok(Client { http, token: token.filter(|t| !t.trim().is_empty()), curse: None })
+    }
+
+    /// Adds a CurseForge API key, so CurseForge can be searched and its projects looked up.
+    pub fn with_curseforge(mut self, key: Option<String>) -> Client {
+        self.curse = key.map(|k| k.trim().to_string()).filter(|k| !k.is_empty()).map(|k| Curse::new(self.http.clone(), k));
+        self
+    }
+
+    /// CurseForge's API, or what to do when there is no key for it.
+    pub fn curseforge(&self) -> Result<&Curse> {
+        self.curse.as_ref().ok_or_else(|| msg("CurseForge needs your own API key, free at console.curseforge.com. Add it in Settings."))
     }
 
     fn api(&self, url: &str) -> reqwest::RequestBuilder {
@@ -135,8 +149,12 @@ impl Client {
     }
 
     /// The newest release of `source` built for Forever, and its zip. Looks back at most
-    /// `MAX_RELEASES` releases: an addon with no Forever build in its last few has none.
+    /// `MAX_RELEASES` releases: an addon with no Forever build in its last few has none. A
+    /// CurseForge project's newest Forever file comes from CurseForge.
     pub async fn latest(&self, source: &Source) -> Result<Latest> {
+        if let Some(project) = &source.curseforge {
+            return self.curseforge()?.latest(project).await;
+        }
         let mut looked = 0;
         for page in 1..=MAX_PAGES {
             let releases = self.releases_page(&source.repo, page).await?;
@@ -248,7 +266,7 @@ mod tests {
             html_url: String::new(),
             assets: vec![],
         };
-        let spoken = Source { repo: "rusty-key/spoken-wow".into(), tag_prefix: Some("spoken/v".into()), asset: None };
+        let spoken = Source { tag_prefix: Some("spoken/v".into()), ..Source::github("rusty-key/spoken-wow") };
         assert!(wanted(&release("spoken/v3.6.0", false), &spoken));
         assert!(!wanted(&release("spoken/v3.6.0-alpha.2", true), &spoken));
         assert!(!wanted(&release("quests-audio/v2.4.0", false), &spoken));

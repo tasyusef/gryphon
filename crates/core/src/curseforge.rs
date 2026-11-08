@@ -1,6 +1,7 @@
 //! CurseForge: searching it, and finding each project's newest WoW Forever file. Its API needs a
 //! key, and each player brings their own (free at console.curseforge.com), since an app's key
-//! can't be shared. Files download from CurseForge's file servers with no key.
+//! can't be shared. Since 16 July 2026 CurseForge's file servers want the key too
+//! (blog.curseforge.com, "API key authentication for CurseForge file downloads").
 
 use gryphon_shared::{CurseProject, Found, Search, curseforge_url};
 use reqwest::{StatusCode, Url, header};
@@ -171,6 +172,14 @@ impl Curse {
         Curse { http, key }
     }
 
+    /// The key, for a download from CurseForge's own file servers (edge.forgecdn.net, which
+    /// redirects to mediafilez.forgecdn.net) and nowhere else.
+    pub fn key_for(&self, url: &str) -> Option<&str> {
+        let url = Url::parse(url).ok()?;
+        let host = url.host_str()?;
+        (url.scheme() == "https" && (host == "forgecdn.net" || host.ends_with(".forgecdn.net"))).then_some(self.key.as_str())
+    }
+
     async fn get<T: DeserializeOwned>(&self, url: Url, missing: impl FnOnce() -> String) -> Result<T> {
         let response = self.http.get(url).header("x-api-key", &self.key).header(header::ACCEPT, "application/json").send().await?;
         match response.status() {
@@ -260,6 +269,17 @@ fn to_latest(project: &Mod, file: &File) -> Result<Latest> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn sends_the_key_only_to_curseforges_file_servers() {
+        let curse = Curse::new(reqwest::Client::new(), "k".into());
+        assert_eq!(curse.key_for("https://edge.forgecdn.net/files/1/2/a.zip"), Some("k"));
+        assert_eq!(curse.key_for("https://mediafilez.forgecdn.net/files/1/2/a.zip"), Some("k"));
+        assert_eq!(curse.key_for("http://edge.forgecdn.net/files/1/2/a.zip"), None);
+        assert_eq!(curse.key_for("https://github.com/x/y/releases/download/v1/a.zip"), None);
+        assert_eq!(curse.key_for("https://notforgecdn.net/a.zip"), None);
+        assert_eq!(curse.key_for("https://forgecdn.net.example.com/a.zip"), None);
+    }
 
     fn file(id: u64, release: u8, types: &[u64], url: Option<&str>) -> serde_json::Value {
         json!({

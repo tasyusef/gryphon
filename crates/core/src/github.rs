@@ -207,10 +207,15 @@ impl Client {
         Ok(self.http.get(&asset.browser_download_url).send().await?.error_for_status()?.json().await?)
     }
 
-    /// Streams `url` into `dest`, reporting bytes as they arrive. No token is sent: release
-    /// files are public, and the download is served from another host.
+    /// Streams `url` into `dest`, reporting bytes as they arrive. No GitHub token is sent:
+    /// release files are public, and the download is served from another host. CurseForge's
+    /// file servers get the CurseForge key, which they ask for.
     pub async fn download(&self, url: &str, dest: &Path, mut on_bytes: impl FnMut(u64, Option<u64>)) -> Result<()> {
-        let mut response = self.http.get(url).header(header::ACCEPT, "application/octet-stream").send().await?.error_for_status()?;
+        let mut request = self.http.get(url).header(header::ACCEPT, "application/octet-stream");
+        if let Some(key) = self.curse.as_ref().and_then(|c| c.key_for(url)) {
+            request = request.header("x-api-key", key);
+        }
+        let mut response = request.send().await?.error_for_status()?;
         let total = response.content_length();
         let mut file = tokio::fs::File::create(dest).await?;
         let mut done = 0u64;

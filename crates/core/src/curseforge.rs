@@ -184,7 +184,8 @@ impl Curse {
         let response = self.http.get(url).header("x-api-key", &self.key).header(header::ACCEPT, "application/json").send().await?;
         match response.status() {
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                Err(msg("CurseForge turned down the API key. Check it in Settings, or make a new one at console.curseforge.com."))
+                // A key pasted right gets this too until CurseForge approves it (2026-11).
+                Err(msg("CurseForge turned down the API key. If it's pasted right, CurseForge may not have approved it yet. Check console.curseforge.com."))
             }
             StatusCode::NOT_FOUND => Err(msg(missing())),
             StatusCode::TOO_MANY_REQUESTS => Err(msg("CurseForge says that's too many requests for now. Try again in a minute.")),
